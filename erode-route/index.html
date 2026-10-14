@@ -443,6 +443,9 @@ const routeFlowMat = routeMesh.material, routeSolidMat = widen(new THREE.MeshBas
 const gOut = { pos: [], idx: [] }; ribbon(RP, 22, 0.42, 1, gOut);
 const glowMesh = wideMesh(gOut, new THREE.MeshBasicMaterial({ color: "#E8603F", transparent: true, opacity: 0.2, depthWrite: false, toneMapped: false, fog: false }), WU.route);
 routeGroup.add(glowMesh, routeMesh);
+// x-ray pass: where houses hide a narrow lane, the route still shows faintly through them
+const xrayMesh = new THREE.Mesh(routeMesh.geometry, widen(new THREE.MeshBasicMaterial({ map: flowTex, transparent: true, opacity: 0.4, depthTest: false, depthWrite: false, toneMapped: false, fog: false }), WU.route, true));
+xrayMesh.frustumCulled = false; xrayMesh.renderOrder = 3; routeGroup.add(xrayMesh);
 let routeProgress = 1;
 const headPuck = new THREE.Group(); headPuck.visible = false; routeGroup.add(headPuck);
 headPuck.add(new THREE.Mesh(new THREE.CircleGeometry(7, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: "#ffffff", toneMapped: false, depthTest: false })));
@@ -639,7 +642,7 @@ function updateSun() {
   if (dashMesh) dashMesh.visible = d < 2400;
   routeMesh.material = d > 3800 ? routeSolidMat : routeFlowMat;
   const over = d > 2600; [routeSolidMat, routeFlowMat, glowMesh.material, ringMat].forEach(m => m.depthTest = !over); rings.forEach(r => r.material.depthTest = !over);
-  routeMesh.renderOrder = over ? 6 : 2; glowMesh.renderOrder = over ? 5 : 1;
+  routeMesh.renderOrder = over ? 6 : 2; glowMesh.renderOrder = over ? 5 : 1; xrayMesh.visible = !over;
   // depth precision: near plane scales with distance so the route never z-fights with the roads
   const nn = Math.min(500, Math.max(2, d * 0.025)), ff = d * 5 + 6000; if (camera.near !== nn || camera.far !== ff) { camera.near = nn; camera.far = ff; camera.updateProjectionMatrix(); }
 }
