@@ -93,7 +93,8 @@ button,a{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
 .key{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center}
 .key i{height:12px;border-radius:3px;display:block}
 .k-route{background:var(--route);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
-.k-stop{background:linear-gradient(90deg,#E3000F 0 20%,#009EE3 20% 40%,#00963F 40% 60%,#E5007D 60% 80%,#7C6EB0 80%)}
+.k-stop{background:linear-gradient(90deg,#E3000F 0 14%,#009EE3 14% 28%,#00963F 28% 43%,#EF7C00 43% 57%,#E5007D 57% 71%,#5DA172 71% 86%,#7C6EB0 86%)}
+.tag b .hs{width:12px;height:12px;flex:none;fill:none;stroke:#192124;stroke-width:2;stroke-linejoin:round;margin-right:-2px}
 .k-start{width:14px!important;height:14px!important;border-radius:50%!important;background:#0F7A4A;margin-left:8px}
 .k-wp{width:14px!important;height:14px!important;border-radius:50%!important;box-shadow:inset 0 0 0 2px var(--ink);background:var(--panel-solid);margin-left:8px}
 .k-bld{background:#F1EFE9;box-shadow:inset 0 0 0 1px #A9A69D}
@@ -254,7 +255,7 @@ dl.fields dd{margin:0;font-weight:550;min-width:0;overflow-wrap:anywhere}
           <div class="keys">
             <div class="key"><i class="k-route"></i>Route, along the roads</div>
             <div class="key"><i class="k-start"></i>Start point, where you join the route</div>
-            <div class="key"><i class="k-stop"></i>Stop building, coloured block</div>
+            <div class="key"><i class="k-stop"></i>Stop building or house, coloured block</div>
             <div class="key"><i class="k-wp"></i>Waypoint, a point on the route</div>
             <div class="key"><i class="k-road"></i>Road with kerb</div>
             <div class="key"><i class="k-bld"></i>Building, drawn from the street layout</div>
@@ -328,6 +329,7 @@ const km = m => m >= 1000 ? (m / 1000).toFixed(1) + " km" : Math.round(m) + " m"
 const isPhone = () => matchMedia("(max-width:720px), (max-width:1180px) and (orientation:portrait) and (min-height:900px)").matches;
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22V3h12l-2.6 4.5L18 12H8v10z"/></svg>';
+const HOUSE = '<svg class="hs" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11L12 4l8.5 7M6 9.5V20h12V9.5M10 20v-5h4v5"/></svg>';
 const GMAPS = "https://maps.app.goo.gl/qey6fZK5ZBaxcxst5";
 function toast(t, ms) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => el.hidden = true, ms || 2800); }
 
@@ -474,7 +476,7 @@ let mode = "plan", sel = -1, showLabels = true, showRoute = true;
 const chips = STOPS.map((s, i) => {
   const el = document.createElement("div"), guide = s.kind === "guide", wp = s.kind === "coord";
   el.className = "tag" + (wp ? " wp" : "");
-  el.innerHTML = wp ? `<b>${s.no}</b>` : `<b><span class="nb" style="--c:${guide ? "#0F7A4A" : s.fill}">${guide ? FLAG : s.no}</span><span class="tx">${esc((guide ? "Start · " + s.name : s.name).toUpperCase())}</span></b>`;
+  el.innerHTML = wp ? `<b>${s.no}</b>` : `<b><span class="nb" style="--c:${guide ? "#0F7A4A" : s.fill}">${guide ? FLAG : s.no}</span>${s.house ? `<span class="tx">${HOUSE}</span>` : ""}<span class="tx">${esc((guide ? "Start · " + s.name : s.name).toUpperCase())}</span></b>`;
   el.addEventListener("click", ev => { ev.stopPropagation(); go(i); });
   const at = s.top || [s.lon, s.lat];
   const mk = new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(at).addTo(map);
@@ -518,7 +520,7 @@ function detailHTML(s) {
   return `<div class="det-head">${sw}<div><div class="det-cat">${esc(title(s))}</div><div class="det-kind">${guide ? "Start · the guide point where you join the route" : wp ? `Stop ${s.no} of ${NST} · a point on the route` : `Stop ${s.no} of ${NST} · ${esc(s.sub)}`}</div></div></div>
   <dl class="fields">
     ${guide ? `<dt>What to do</dt><dd>Reach this point first, then follow the gold route to stop 1, ${esc(STOPS[1].name)} (${km(STOPS[1].leg_m)}).</dd>` : ""}
-    ${!wp ? `<dt>Address</dt><dd>${esc(s.sub)}</dd>` : ""}
+    ${!wp ? `<dt>${s.house ? "Where" : "Address"}</dt><dd>${esc(s.sub)}</dd>` : ""}
     ${s.note ? `<dt>Note</dt><dd>${esc(s.note)}</dd>` : ""}
     <dt>Distance</dt><dd>${i > 0 ? km(s.leg_m) + " from " + prevName(i) + " · " + km(s.cum_m) + " from the start point" : "The route starts here"}</dd>
     <dt>Location</dt><dd class="mono"><span id="coords">${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}</span></dd>
