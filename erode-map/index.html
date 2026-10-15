@@ -328,12 +328,12 @@ function addOverlay() {
   map.addLayer({ id: "stop-ring", type: "circle", source: "stops",
     paint: { "circle-radius": ["case", ["boolean", ["feature-state", "sel"], false], 23, 0], "circle-color": "rgba(255,211,77,0.28)",
       "circle-stroke-color": "#FFD34D", "circle-stroke-width": ["case", ["boolean", ["feature-state", "sel"], false], 3.5, 0], "circle-pitch-alignment": "viewport" } });
-  map.addLayer({ id: "stop-dot", type: "symbol", source: "stops", filter: ["any", ["==", ["get", "place"], true], [">=", ["zoom"], 13]],
+  map.addLayer({ id: "stop-dot", type: "symbol", source: "stops",
     layout: { "icon-image": ["concat", "stop-", ["get", "n"]], "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-pitch-alignment": "viewport",
       "symbol-sort-key": ["-", 0, ["to-number", ["get", "n"]]], "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.82, 15, 1] } });
   map.addLayer({ id: "stop-name", type: "symbol", source: "stopnames",
-    layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 11, 12, 17, 15], "text-anchor": "left", "text-offset": [1.45, 0],
-      "text-max-width": 14, "text-padding": 3, "text-optional": true, "symbol-sort-key": ["to-number", ["get", "n"]] },
+    layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 11, 12, 17, 15], "text-variable-anchor": ["left", "right", "top", "bottom"], "text-radial-offset": 1.35, "text-justify": "auto",
+      "text-max-width": 12, "text-padding": 2, "symbol-sort-key": ["to-number", ["get", "n"]] },
     paint: { "text-color": "#FFFFFF", "text-halo-color": "#0E1B24", "text-halo-width": 2.2 } });
   if (sel >= 0) map.setFeatureState({ source: "stops", id: sel }, { sel: true });
   setProgress(progress);
