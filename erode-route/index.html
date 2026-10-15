@@ -206,6 +206,8 @@ const S = window.SCENE_DATA || await (await fetch("scene.json")).json();
 const stops = S.stops;
 // Sri Thindal Cafe is the start point that guides people onto the route, not a stop; stops are numbered from Burhani Palace
 stops[0].kind = "guide";
+// stops 5 and 7 on the map (link points 6 and 8) are houses
+[[5, "Near Mufaddal Beehive, Vairapalayam"], [7, "Near 2, 8th C Street, Thirunagar Colony"]].forEach(([k, w]) => { stops[k].kind = "place"; stops[k].name = "House"; stops[k].sub = w; });
 const FLAG = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" style="fill:#fff;display:block"><path d="M6 22V3h12l-2.6 4.5L18 12H8v10z"/></svg>';
 const disp = i => i === 0 ? "S" : String(i);
 
