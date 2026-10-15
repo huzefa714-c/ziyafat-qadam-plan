@@ -64,6 +64,7 @@ h1{margin:7px 0 0;font-size:24px;line-height:1;font-weight:820;font-stretch:122%
 .stop[aria-current="true"]{background:var(--route-soft);border-color:var(--route)}
 .stop .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:600 12px/1 var(--f-mono);background:var(--ink);color:var(--panel-solid)}
 .stop.coord .n{background:var(--panel-solid);color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.stop.guide .n,.pin.guide .n{background:#0F7A4A;color:#fff}
 .stop .t{display:block;font-weight:700;font-size:13.5px;line-height:1.25}
 .stop .s{display:block;font-size:12px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
 .stop .d{font:500 11.5px/1.3 var(--f-mono);color:var(--muted);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
@@ -146,7 +147,7 @@ h1{margin:7px 0 0;font-size:24px;line-height:1;font-weight:820;font-stretch:122%
         <div class="eyebrow">Erode · Tamil Nadu</div>
         <h1>ERODE ROUTE<br>MASTER PLAN</h1>
         <div class="stats">
-          <div><b id="sStops">10</b>stops</div>
+          <div><b id="sStops">9</b>stops</div>
           <div><b id="sDist">19.4 km</b>by road</div>
           <div><b id="sTime">28 min</b>drive time</div>
         </div>
@@ -203,6 +204,10 @@ const APPLE_TOUCH = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/
 const LOW = APPLE_TOUCH || isPhone();
 const S = window.SCENE_DATA || await (await fetch("scene.json")).json();
 const stops = S.stops;
+// Sri Thindal Cafe is the start point that guides people onto the route, not a stop; stops are numbered from Burhani Palace
+stops[0].kind = "guide";
+const FLAG = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" style="fill:#fff;display:block"><path d="M6 22V3h12l-2.6 4.5L18 12H8v10z"/></svg>';
+const disp = i => i === 0 ? "S" : String(i);
 
 /* ---------- panel ---------- */
 const fmtKm = m => m >= 1000 ? (m / 1000).toFixed(1) + " km" : Math.round(m) + " m";
@@ -211,10 +216,10 @@ $("sTime").textContent = Math.round(S.route.total_s / 60) + " min";
 const list = $("stops");
 stops.forEach((s, i) => {
   const li = document.createElement("li");
-  li.innerHTML = `<button type="button" class="stop ${s.kind === "coord" ? "coord" : ""}" data-i="${i}"><span class="n">${i + 1}</span>
+  li.innerHTML = `<button type="button" class="stop ${s.kind === "coord" ? "coord" : s.kind === "guide" ? "guide" : ""}" data-i="${i}"><span class="n">${i ? i : FLAG}</span>
     <span><span class="t"></span><span class="s"></span></span>
     <span class="d">${i ? `<b>+${fmtKm(s.leg_m)}</b>${fmtKm(s.cum_m)}` : "<b>Start</b>0 km"}</span></button>`;
-  li.querySelector(".t").textContent = s.name; li.querySelector(".s").textContent = s.sub;
+  li.querySelector(".t").textContent = s.name; li.querySelector(".s").textContent = s.kind === "guide" ? "Start · guide point · " + s.sub : s.sub;
   list.appendChild(li);
 });
 $("q").addEventListener("input", e => {
@@ -462,9 +467,9 @@ const ringMat = new THREE.MeshBasicMaterial({ color: "#D9472B", transparent: tru
 const rings = stops.map(s => { const m = new THREE.Mesh(new THREE.RingGeometry(14, 18, 40).rotateX(-Math.PI / 2), ringMat.clone()); m.position.set(s.x, 0.7, s.z); routeGroup.add(m); return m; });
 
 /* ---------- pins + road names ---------- */
-const pinEls = stops.map((s, i) => { const el = document.createElement("div"); el.className = "pin" + (s.kind === "coord" ? " coord" : ""); el.dataset.i = i;
-  el.innerHTML = `<span class="n">${i + 1}</span><span class="l"></span>`;
-  el.querySelector(".l").innerHTML = s.kind === "coord" ? "" : ""; const l = el.querySelector(".l"); l.textContent = s.kind === "coord" ? (s.name === "End point" ? "End point" : "Waypoint") : s.name;
+const pinEls = stops.map((s, i) => { const el = document.createElement("div"); el.className = "pin" + (s.kind === "coord" ? " coord" : s.kind === "guide" ? " guide" : ""); el.dataset.i = i;
+  el.innerHTML = `<span class="n">${i ? i : FLAG}</span><span class="l"></span>`;
+  el.querySelector(".l").innerHTML = s.kind === "coord" ? "" : ""; const l = el.querySelector(".l"); l.textContent = s.kind === "coord" ? (s.name === "End point" ? "End point" : "Waypoint") : s.kind === "guide" ? "Start · " + s.name : s.name;
   if (s.kind === "coord") el.classList.add("hide-l");
   el.addEventListener("click", () => { const c = el._cl; if (c && c.length > 1) flyCluster(c); else goStop(i); }); pinsEl.appendChild(el); return el; });
 function flyCluster(c) { let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; c.forEach(k => { x0 = Math.min(x0, stops[k].x); x1 = Math.max(x1, stops[k].x); z0 = Math.min(z0, stops[k].z); z1 = Math.max(z1, stops[k].z); });
@@ -485,14 +490,14 @@ function placeOverlays() {
   for (let i = 0; i < stops.length; i++) for (let j = i + 1; j < stops.length; j++)
     if (P[i].vis && P[j].vis && i !== state.sel && j !== state.sel && Math.hypot(P[i].x - P[j].x, P[i].y - P[j].y) < 40) par[Math.max(root(i), root(j))] = Math.min(root(i), root(j));
   const groups = {}; stops.forEach((s, i) => { if (P[i].vis) (groups[root(i)] = groups[root(i)] || []).push(i); });
-  const rangeTxt = g => { const r = []; g.forEach(k => { const l = r[r.length - 1]; if (l && l[1] === k - 1) l[1] = k; else r.push([k, k]); }); return r.map(([a, b]) => a === b ? `${a + 1}` : `${a + 1}–${b + 1}`).join(", "); };
+  const rangeTxt = g => { const r = []; g.forEach(k => { const l = r[r.length - 1]; if (l && l[1] === k - 1) l[1] = k; else r.push([k, k]); }); return r.map(([a, b]) => a === b ? disp(a) : `${disp(a)}–${disp(b)}`).join(", "); };
   const order = stops.map((s, i) => i).sort((a, b) => (b === state.sel) - (a === state.sel));
   order.forEach(i => {
     const s = stops[i], el = pinEls[i], g = groups[i], merged = root(i) !== i;
     let { x, y } = P[i]; const vis = P[i].vis && !merged; el._cl = g || null;
-    const cl = !!(g && g.length > 1), txt = cl ? rangeTxt(g) : String(i + 1), n = el.querySelector(".n");
+    const cl = !!(g && g.length > 1), txt = cl ? rangeTxt(g) : (i === 0 ? "flag" : String(i)), n = el.querySelector(".n");
     if (cl) { x = g.reduce((a, k) => a + P[k].x, 0) / g.length; y = g.reduce((a, k) => a + P[k].y, 0) / g.length; }
-    if (n.textContent !== txt) n.textContent = txt; el.classList.toggle("cl", cl);
+    if (n.dataset.t !== txt) { n.dataset.t = txt; if (txt === "flag") n.innerHTML = FLAG; else n.textContent = txt; } el.classList.toggle("cl", cl);
     const lw0 = el.querySelector(".l").offsetWidth || 120, flip = !cl && x + 26 + lw0 > W - 8;
     el.classList.toggle("flip", flip);
     el.style.transform = flip ? `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(calc(13px - 100%),-50%)` : `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-13px,-50%)`;
