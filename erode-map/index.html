@@ -3,406 +3,624 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0E1B24">
-<meta name="description" content="Live 3D satellite map of the Erode route for Burhani Guards: start point at Sri Thindal Cafe, then nine stops in order, with Google Maps directions to each.">
-<title>Erode Route Map</title>
+<meta name="theme-color" content="#E2E6E3">
+<meta name="description" content="Erode Route Plan for Burhani Guards: a 3D model of the real route, the start point at Sri Thindal Cafe and nine stops, with Google Maps directions to each.">
+<title>Erode Route Plan</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
 <style>
-/* Layout: full-screen satellite map; route card floats top-left (bottom sheet on phones); view switches top-right. */
+/* Layout: the route sits on a full-bleed model board (the real map); title block top-left, stop list dock below it
+   (a bottom sheet on phones), view tools top-right, compass and zoom bottom-right. Same visual language as the Ziyafat Qadam plan. */
 :root{
-  --panel:rgba(250,251,249,.96); --panel-solid:#FAFBF9; --ink:#14212B; --muted:#5B6873; --line:#D6DDE1; --chip:#EDF1F3;
-  --route:#2F6BF2; --route-ink:#1546B8; --go:#0F7A4A; --go-ink:#FFFFFF; --wp:#FFFFFF; --focus:#2F6BF2;
-  --shadow:0 1px 2px rgba(10,20,28,.10),0 10px 30px rgba(10,20,28,.22);
+  --bg:#E2E6E3; --bg-2:#C9D0CC; --panel:rgba(250,251,248,.95); --panel-solid:#FAFBF8;
+  --ink:#192124; --muted:#5A666B; --line:#D0D6D2; --chip:#EDF0EC; --chip-on:#192124; --chip-on-ink:#FAFBF8;
+  --focus:#1D6E87; --go:#0F7A4A; --go-ink:#FFFFFF; --route:#F6B300;
+  --shadow:0 1px 2px rgba(20,30,34,.08),0 8px 28px rgba(20,30,34,.14);
   --f-display:"Archivo","Helvetica Neue",Arial,sans-serif; --f-body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
-  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace; --r:14px;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; --r:10px;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --panel:rgba(18,26,32,.94); --panel-solid:#121A20; --ink:#E8EEF1; --muted:#9AA8B2; --line:#2A3740; --chip:#1D2830;
-  --route:#5B8CFF; --route-ink:#9BB8FF; --go:#24A36A; --go-ink:#FFFFFF; --focus:#7FA6FF; --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.5);
-  color-scheme:dark;
+  --bg:#0F1416; --bg-2:#1B2427; --panel:rgba(21,27,30,.94); --panel-solid:#151B1E;
+  --ink:#E7ECEA; --muted:#97A3A7; --line:#2B3539; --chip:#1F282C; --chip-on:#E7ECEA; --chip-on-ink:#12181B;
+  --focus:#6DC2DC; --go:#1F9A61; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.45); color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --panel:rgba(18,26,32,.94); --panel-solid:#121A20; --ink:#E8EEF1; --muted:#9AA8B2; --line:#2A3740; --chip:#1D2830;
-  --route:#5B8CFF; --route-ink:#9BB8FF; --go:#24A36A; --go-ink:#FFFFFF; --focus:#7FA6FF; --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.5);
-  color-scheme:dark;
+  --bg:#0F1416; --bg-2:#1B2427; --panel:rgba(21,27,30,.94); --panel-solid:#151B1E;
+  --ink:#E7ECEA; --muted:#97A3A7; --line:#2B3539; --chip:#1F282C; --chip-on:#E7ECEA; --chip-on-ink:#12181B;
+  --focus:#6DC2DC; --go:#1F9A61; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.45); color-scheme:dark;
 }
 html,body{height:100%;margin:0}
-body{background:#0E1B24;color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;overflow:hidden;-webkit-font-smoothing:antialiased}
 *{box-sizing:border-box}
 button,a{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 [hidden]{display:none!important}
+#app{position:relative;height:100%;width:100%;overflow:hidden;background:radial-gradient(120% 90% at 55% 45%, #E6EAE6 0%, #E2E6E3 45%, #C9D0CC 100%)}
 #map{position:absolute;inset:0}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:#5A666B;font-family:var(--f-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;pointer-events:none}
+
+/* HUD */
+.hud{position:absolute;inset:0;pointer-events:none;display:grid;gap:12px;
+  padding-block:calc(16px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  grid-template-columns:minmax(0,330px) minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"head . tools" "dock . ." "dock . nav"}
+.hud>*{pointer-events:auto}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.head{grid-area:head;padding:14px 16px 13px;align-self:start}
+.head-row{display:flex;gap:12px;align-items:center}.head-text{min-width:0}
+.emblem{width:54px;height:54px;flex:none;border-radius:50%;background:#FBF9F5;padding:2px;box-shadow:0 0 0 1px var(--line)}
+.eyebrow{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.title{margin:6px 0 0;font-family:var(--f-display);font-stretch:125%;font-weight:800;font-size:21px;line-height:1.05;letter-spacing:.02em;text-wrap:balance}
+.sub{margin:5px 0 0;font-size:13px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.sub::before{content:"";width:18px;height:2px;background:var(--ink);border-radius:2px}
 
-/* route card */
-.card{position:absolute;z-index:3;left:max(14px,env(safe-area-inset-left,0px));top:calc(14px + env(safe-area-inset-top,0px));width:372px;
-  max-height:calc(100% - 28px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden}
-.c-head{padding:14px 16px 12px;border-bottom:1px solid var(--line)}
-.eyebrow{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-h1{margin:4px 0 0;font-family:var(--f-display);font-stretch:118%;font-weight:800;font-size:23px;line-height:1.05;letter-spacing:.01em}
-.stats{display:flex;gap:18px;margin-top:9px;font-size:12px;color:var(--muted)}
+.dock{grid-area:dock;display:flex;flex-direction:column;min-height:0;align-self:start;max-height:100%}
+.tabs{display:flex;gap:2px;padding:6px;border-bottom:1px solid var(--line)}
+.tab{flex:1;border:0;background:none;border-radius:7px;padding:7px 6px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--chip);color:var(--ink)}
+.tab .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--focus);margin-left:5px;vertical-align:1px}
+.sheet-toggle{display:none}
+.pane{padding:12px 14px 14px;overflow:auto;min-height:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.stats{display:flex;gap:18px;font-size:11.5px;color:var(--muted)}
 .stats b{display:block;font-family:var(--f-mono);font-weight:500;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
-.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 13px;border-radius:10px;border:1px solid var(--line);background:var(--panel-solid);
-  font-weight:650;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap}
-.btn:hover{background:var(--chip)}
-.btn svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--panel-solid);border-radius:8px;padding:7px 11px;font-size:12.5px;font-weight:650;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--ink)}
+.btn svg{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .btn.go{background:var(--go);border-color:var(--go);color:var(--go-ink)}
-.btn.go:hover{filter:brightness(1.07)}
-.btn.sm{min-height:32px;padding:0 10px;font-size:12.5px;border-radius:9px}
-.btn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--panel-solid)}
-.sheet-t{display:none}
-.c-body{overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px 8px 8px;flex:1 1 auto;min-height:0}
-.note{font-size:11.5px;color:var(--muted);padding:6px 8px 2px;margin:0}
-
-/* stop list */
-.stops{list-style:none;margin:0;padding:0;display:grid;gap:2px}
-.st{width:100%;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid transparent;background:none;border-radius:10px;padding:8px;cursor:pointer;text-align:left}
+.btn.primary{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on)}
+.hint{font-size:12px;color:var(--muted);margin:10px 0 6px}
+.stops{list-style:none;margin:0;padding:0;display:grid;gap:1px}
+.st{width:100%;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid transparent;background:none;border-radius:8px;padding:6px 8px;cursor:pointer;text-align:left}
 .st:hover{background:var(--chip)}
 .st[aria-current="true"]{background:var(--chip);border-color:var(--ink)}
-.num{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#0E1B24;color:#fff;font:600 12px/1 var(--f-mono);box-shadow:0 0 0 2px #fff}
-.num.wp{background:#fff;color:#0E1B24;box-shadow:inset 0 0 0 2px #0E1B24}
+.num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--c,#192124);color:#fff;font:600 11.5px/1 var(--f-mono)}
+.num.wp{background:var(--panel-solid);color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
 .num.guide{background:#0F7A4A}
-.num svg{width:14px;height:14px;fill:#fff}
-.tagline{display:inline-block;font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#0F7A4A;font-weight:500;margin-left:6px;vertical-align:1px}
-.st .t{display:block;font-weight:700;font-size:13.5px;line-height:1.25}
-.st .s{display:block;font-size:12px;color:var(--muted);line-height:1.3;margin-top:1px}
+.num svg{width:13px;height:13px;fill:#fff}
+.st .t{display:block;font-weight:700;font-size:13px;line-height:1.25;letter-spacing:.01em}
+.st .s{display:block;font-size:11.5px;color:var(--muted);line-height:1.3;margin-top:1px}
 .st .d{font-family:var(--f-mono);font-size:11px;color:var(--muted);text-align:right;line-height:1.4;white-space:nowrap;font-variant-numeric:tabular-nums}
-.detail{margin:2px 0 6px;padding:12px;border-radius:12px;background:var(--chip);display:grid;gap:9px}
-.detail .row{display:flex;gap:8px;flex-wrap:wrap}
-.detail .nav2{justify-content:space-between}
-.btn:disabled{opacity:.4;cursor:default}
-.detail dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
-.detail dt{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding-top:2px}
-.detail dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.gtag{display:inline-block;margin-left:6px;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#0F7A4A;font-weight:500;vertical-align:1px}
+.sec{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.sec h3{margin:0 0 8px;font-family:var(--f-mono);font-weight:500;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.keys{display:grid;gap:7px;font-size:12.5px;color:var(--muted)}
+.key{display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center}
+.key i{height:12px;border-radius:3px;display:block}
+.k-route{background:var(--route);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.k-stop{background:linear-gradient(90deg,#E3000F 0 20%,#009EE3 20% 40%,#00963F 40% 60%,#E5007D 60% 80%,#7C6EB0 80%)}
+.k-start{width:14px!important;height:14px!important;border-radius:50%!important;background:#0F7A4A;margin-left:8px}
+.k-wp{width:14px!important;height:14px!important;border-radius:50%!important;box-shadow:inset 0 0 0 2px var(--ink);background:var(--panel-solid);margin-left:8px}
+.k-bld{background:#F1EFE9;box-shadow:inset 0 0 0 1px #A9A69D}
+.k-osm{background:#DCE6EC;box-shadow:inset 0 0 0 1px #8FA3AF}
+.k-road{background:#3C4347;box-shadow:inset 0 2px 0 #F7F7F3,inset 0 -2px 0 #F7F7F3;height:10px!important}
+.k-street{background:#7E8486;height:5px!important}
+.k-green{background:#C9DDBC} .k-water{background:#A7C9DE}
+.k-grid{background:transparent;border:1.5px dashed var(--muted)}
+.empty{color:var(--muted);font-size:13px;margin:4px 0}
+.det-head{display:flex;gap:12px;align-items:center}
+.det-sw{width:40px;height:40px;border-radius:8px;background:var(--c);flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);display:grid;place-items:center}
+.det-sw svg{width:18px;height:18px;fill:#fff}
+.det-sw.wp{background:var(--panel-solid);box-shadow:inset 0 0 0 2px var(--ink);font:600 14px/1 var(--f-mono)}
+.det-cat{font-family:var(--f-display);font-stretch:112%;font-weight:750;font-size:16px;letter-spacing:.02em;line-height:1.15}
+.det-kind{font-size:12px;color:var(--muted)}
+dl.fields{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 14px;margin:14px 0 0;font-size:13px}
+dl.fields dt{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+dl.fields dd{margin:0;font-weight:550;min-width:0;overflow-wrap:anywhere}
 .mono{font-family:var(--f-mono);font-size:12px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.actions.between{justify-content:space-between}
+.tb{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--ink);border-radius:4px;overflow:hidden}
+.tb>div{padding:7px 9px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
+.tb>div:nth-child(2n){border-right:0}
+.tb>div.wide{grid-column:1/-1;border-right:0}
+.tb>div:last-child{border-bottom:0}
+.tb small{display:block;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tb b{display:block;font-size:12.5px;font-weight:650;margin-top:1px;overflow-wrap:anywhere}
+.notes{font-size:12.5px;color:var(--muted);margin:12px 0 0;display:grid;gap:7px;padding-left:16px}
+.notes a{color:inherit}
 
-/* view switches */
-.views{position:absolute;z-index:3;right:max(14px,env(safe-area-inset-right,0px));top:calc(14px + env(safe-area-inset-top,0px));display:flex;gap:8px;padding:6px}
-.seg{display:inline-flex;background:var(--chip);border-radius:10px;padding:3px}
-.seg button{border:0;background:none;padding:6px 11px;border-radius:8px;font-weight:650;font-size:13px;cursor:pointer;color:var(--muted)}
-.seg button[aria-pressed="true"]{background:var(--panel-solid);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.tools{grid-area:tools;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end;padding:6px;align-self:start;max-width:940px}
+.seg{display:inline-flex;background:var(--chip);border-radius:8px;padding:3px;gap:2px}
+.seg button{border:0;background:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--panel-solid);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.tools .sep{width:1px;align-self:stretch;background:var(--line);margin:2px 2px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel-solid);border-radius:999px;padding:5px 11px 5px 8px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.chip .sq{width:14px;height:14px;border-radius:4px;border:1.5px solid var(--muted);display:grid;place-items:center}
+.chip[aria-pressed="true"] .sq{background:var(--ink);border-color:var(--ink)}
+.chip[aria-pressed="true"] .sq::after{content:"";width:6px;height:3px;border-left:2px solid var(--chip-on-ink);border-bottom:2px solid var(--chip-on-ink);transform:rotate(-45deg) translate(1px,-1px)}
+.ib{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);background:var(--panel-solid);border-radius:8px;cursor:pointer;flex:none}
+.ib:hover,.chip:hover{border-color:var(--ink)}
+.ib svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ib.on{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on)}
 
-/* tour bar */
-.tour{position:absolute;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(28px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;max-width:calc(100% - 28px)}
+.nav{grid-area:nav;display:flex;align-items:flex-end;gap:10px;justify-self:end;align-self:end}
+.compass{width:84px;height:84px;border-radius:50%;padding:0;cursor:pointer;display:grid;place-items:center}
+.compass svg{width:74px;height:74px}
+.compass .ring{fill:none;stroke:var(--line);stroke-width:1}
+.compass .tick{stroke:var(--muted);stroke-width:1.2}
+.compass .n-dark{fill:var(--ink)} .compass .n-light{fill:var(--panel-solid);stroke:var(--ink);stroke-width:.8}
+.compass text{font-family:var(--f-display);font-weight:800;font-size:11px;fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.compass text.minor{font-size:9px;fill:var(--muted);font-weight:700}
+.zoom{display:flex;flex-direction:column;overflow:hidden;padding:0}
+.zoom button{width:36px;height:36px;border:0;background:none;display:grid;place-items:center;cursor:pointer}
+.zoom button+button{border-top:1px solid var(--line)}
+.zoom svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.helpcol{display:grid;gap:6px;justify-items:end}
+.help{font-size:11.5px;color:var(--muted);text-align:right;max-width:250px;margin:0;line-height:1.35;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 9px}
+.help a{color:inherit}
+
+/* labels on the map: same chips as the Ziyafat Qadam plan */
+.tag{display:flex;flex-direction:column;align-items:center;white-space:nowrap;cursor:pointer;transition:opacity .18s}
+.tag b{display:flex;align-items:center;gap:6px;background:#FAFBF8;color:#192124;border:1px solid #D0D6D2;border-radius:6px;padding:3px 8px 3px 4px;
+  font-size:10.5px;font-weight:750;letter-spacing:.08em;box-shadow:0 2px 8px rgba(0,0,0,.18);font-stretch:108%}
+.tag b .nb{display:grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--c);color:#fff;font:600 10.5px/1 var(--f-mono);letter-spacing:0}
+.tag b .nb svg{width:11px;height:11px;fill:#fff;display:block}
+.tag::after{content:"";width:1.5px;height:10px;background:#192124;opacity:.75}
+.tag.compact b{padding:2px}
+.tag.compact b .tx{display:none}
+.tag.wp b{width:22px;height:22px;padding:0;border-radius:50%;justify-content:center;border:2px solid #192124;font:600 10.5px/1 var(--f-mono);letter-spacing:0}
+.tag.wp::after{height:5px}
+.tag.sel b{box-shadow:0 0 0 2px #192124,0 4px 12px rgba(0,0,0,.28)}
+.tag.off{opacity:0!important;visibility:hidden;pointer-events:none}
+
+#tip{position:absolute;left:0;top:0;pointer-events:none;background:var(--ink);color:var(--panel-solid);font-size:12px;font-weight:600;padding:5px 8px;border-radius:6px;white-space:nowrap;transform:translate(14px,14px);z-index:4}
+#tip small{font-weight:500;opacity:.75}
+.tour{position:absolute;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;max-width:calc(100% - 28px)}
 .tour .tt{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tour .bar{width:140px;height:4px;border-radius:2px;background:var(--line);overflow:hidden;flex:none}
 .tour .bar i{display:block;height:100%;width:0;background:var(--route)}
+.toast{position:absolute;z-index:5;left:50%;top:calc(18px + env(safe-area-inset-top,0px));transform:translateX(-50%);padding:9px 14px;font-size:13px;font-weight:600;max-width:calc(100% - 32px)}
 
-.toast{position:absolute;z-index:5;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translateX(-50%);padding:9px 14px;font-size:13px;font-weight:600}
-.nogl{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#E8EEF1}
-.nogl div{max-width:360px;display:grid;gap:12px;justify-items:center}
-
-/* MapLibre controls in the same language */
-.maplibregl-ctrl-group{border-radius:12px!important;box-shadow:var(--shadow)!important;overflow:hidden}
-.maplibregl-ctrl-group button{width:38px!important;height:38px!important}
-.maplibregl-ctrl-bottom-right{bottom:env(safe-area-inset-bottom,0px);right:env(safe-area-inset-right,0px)}
-.maplibregl-ctrl-attrib{font-size:10.5px}
-.maplibregl-ctrl-scale{border-color:#fff;color:#fff;background:rgba(0,0,0,.35);text-shadow:none}
-
-@media (max-width:720px){
-  .card{left:0;right:0;top:auto;bottom:0;width:auto;border-radius:18px 18px 0 0;border-bottom:0;max-height:62%;
-    padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
-  .card.min .c-body{display:none}
-  .c-head{padding:10px 14px 12px;border-bottom:0}
-  .card:not(.min) .c-head{border-bottom:1px solid var(--line)}
-  .sheet-t{display:block;width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 8px;border:0;padding:0;cursor:pointer}
-  h1{font-size:20px}
-  .views{left:max(12px,env(safe-area-inset-left,0px));right:auto;padding:4px}
-  .maplibregl-ctrl-bottom-right{bottom:calc(env(safe-area-inset-bottom,0px) + var(--sheet-h, 170px))}
-  .maplibregl-ctrl-bottom-left{bottom:calc(env(safe-area-inset-bottom,0px) + var(--sheet-h, 170px))}
-  .tour{bottom:calc(var(--sheet-h, 170px) + 14px)}
-  .tour .bar{width:70px}
+@media (max-width:1280px){.tools{max-width:560px}}
+@media (max-width:1080px){.hud{grid-template-columns:minmax(0,300px) minmax(0,1fr) auto}.tools{max-width:380px}.help{display:none}}
+@media (max-width:720px), (max-width:1180px) and (orientation:portrait) and (min-height:900px){
+  .hud{gap:8px;padding-block:calc(10px + env(safe-area-inset-top,0px)) calc(10px + env(safe-area-inset-bottom,0px));grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr) auto;
+    grid-template-areas:"head nav" "tools tools" ". ." "dock dock"}
+  .head{padding:10px 12px}.title{font-size:16px}.sub{font-size:12px;margin-top:3px}.eyebrow{display:none}.emblem{width:40px;height:40px}
+  .nav{align-self:start;justify-self:end}.zoom,.helpcol{display:none}.compass{width:62px;height:62px}.compass svg{width:54px;height:54px}
+  .tools{max-width:none;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .tools::-webkit-scrollbar{display:none}
+  .dock{align-self:end;max-height:52vh}
+  .dock.collapsed .pane{display:none}
+  .dock.collapsed .tabs{border-bottom:0}
+  .sheet-toggle{display:grid;width:34px;flex:none;border:0;background:none;place-items:center;cursor:pointer;color:var(--muted)}
+  .sheet-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;transition:transform .2s}
+  .dock.collapsed .sheet-toggle svg{transform:rotate(180deg)}
+  .tab{padding:7px 3px;font-size:12px}
+  #tip{display:none}
+  .tour{bottom:calc(var(--dock-h,60px) + 18px)}
 }
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.maplibregl-ctrl-geolocate,.maplibregl-ctrl-bottom-left{display:none!important}
+@media (max-width:720px){.tools #locate{order:-1}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<div id="map" role="application" aria-label="3D satellite map of the Erode route"></div>
+<div id="app">
+  <div id="map" role="application" aria-label="3D model of the Erode route"><div class="loading" id="loading">Building the 3D plan…</div></div>
+  <div id="tip" hidden></div>
 
-<aside class="card panel" id="card" aria-label="Route">
-  <div class="c-head">
-    <button type="button" class="sheet-t" id="sheetT" aria-label="Show or hide the stop list" aria-expanded="true"></button>
-    <div class="eyebrow">Burhani Guards · Erode</div>
-    <h1>Erode Route</h1>
-    <div class="stats"><div><b id="sStops">9</b>stops</div><div><b id="sDist">19.4 km</b>by road</div><div><b id="sTime">28 min</b>by car</div></div>
-    <div class="acts">
-      <a class="btn go" id="openRoute" href="https://maps.app.goo.gl/qey6fZK5ZBaxcxst5" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg>Start in Google Maps</a>
-      <button type="button" class="btn" id="flyBtn"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg>Fly the route</button>
-      <button type="button" class="btn" id="overBtn"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Whole route</button>
+  <div class="hud">
+    <header class="head panel">
+      <div class="head-row">
+        <svg class="emblem" viewBox="3078.0 78.0 198.0 196.0" role="img" aria-label="Burhani Guards Coimbatore emblem"><path d="M3176.83,84.05C3202.28,84.05 3225.32,94.37 3242.00,111.05C3258.68,127.73 3268.99,150.78 3268.99,176.23C3268.99,201.69 3258.68,224.73 3242.00,241.41C3225.32,258.10 3202.28,268.41 3176.83,268.41C3151.38,268.41 3128.33,258.10 3111.66,241.41C3094.98,224.73 3084.66,201.69 3084.66,176.23C3084.66,150.78 3094.98,127.73 3111.66,111.05C3128.33,94.37 3151.38,84.05 3176.83,84.05M3240.41,112.64C3224.13,96.37 3201.66,86.30 3176.83,86.30C3152.00,86.30 3129.52,96.37 3113.25,112.64C3096.97,128.92 3086.91,151.40 3086.91,176.23C3086.91,201.07 3096.97,223.55 3113.25,239.82C3129.52,256.10 3152.00,266.16 3176.83,266.16C3201.66,266.16 3224.13,256.10 3240.41,239.82C3256.68,223.55 3266.74,201.07 3266.74,176.23C3266.74,151.40 3256.68,128.92 3240.41,112.64" fill="#830B1B" fill-rule="nonzero"/><path d="M3176.83,102.94C3197.06,102.94 3215.38,111.14 3228.65,124.41C3241.91,137.67 3250.11,155.99 3250.11,176.23C3250.11,196.47 3241.91,214.80 3228.65,228.06C3215.38,241.32 3197.06,249.53 3176.83,249.53C3156.59,249.53 3138.27,241.32 3125.01,228.06C3111.75,214.80 3103.54,196.47 3103.54,176.23C3103.54,155.99 3111.75,137.67 3125.01,124.41C3138.27,111.14 3156.59,102.94 3176.83,102.94M3227.05,126.00C3214.20,113.14 3196.44,105.19 3176.83,105.19C3157.21,105.19 3139.45,113.14 3126.60,126.00C3113.74,138.85 3105.79,156.61 3105.79,176.23C3105.79,195.85 3113.74,213.61 3126.60,226.47C3139.45,239.33 3157.21,247.28 3176.83,247.28C3196.44,247.28 3214.20,239.33 3227.05,226.47C3239.91,213.61 3247.86,195.85 3247.86,176.23C3247.86,156.61 3239.91,138.85 3227.05,126.00" fill="#830B1B" fill-rule="nonzero"/><path d="M3195.03,173.21C3195.01,173.23 3194.99,173.25 3194.98,173.25C3194.97,173.26 3194.94,173.28 3194.93,173.29L3194.32,173.84C3193.09,174.74 3194.09,175.77 3194.33,176.17L3194.41,176.24L3194.49,176.32L3194.56,176.39L3194.63,176.47L3194.72,176.53L3194.80,176.60L3194.90,176.65L3194.99,176.70C3195.14,176.68 3195.10,176.65 3195.10,176.80C3195.30,177.15 3197.04,178.11 3197.64,178.35C3198.54,178.72 3199.86,179.07 3200.85,179.29C3203.04,179.77 3205.46,180.36 3207.77,180.56C3209.02,180.66 3210.25,180.85 3211.53,180.92C3215.47,181.14 3219.25,180.99 3223.10,180.32C3222.98,180.69 3222.97,180.57 3222.76,180.88C3222.66,181.03 3222.58,181.17 3222.47,181.34L3220.64,184.19C3218.12,188.63 3216.66,192.12 3214.44,196.66C3213.74,198.10 3213.10,199.48 3212.42,200.90C3210.99,203.86 3207.77,211.14 3205.12,212.28C3203.21,213.09 3202.01,211.07 3201.36,210.11C3200.58,208.94 3199.72,207.54 3199.02,206.20C3198.30,204.82 3197.57,203.50 3196.94,202.03C3195.95,199.67 3194.16,195.35 3193.62,192.93C3193.40,191.95 3193.27,191.29 3193.60,190.29C3194.39,187.92 3196.95,189.00 3195.99,186.79C3195.24,185.05 3193.67,182.27 3191.97,181.56L3191.87,181.50C3191.50,181.38 3191.05,181.25 3190.55,181.25C3189.82,181.56 3189.65,181.64 3189.30,182.22C3189.01,182.72 3188.82,183.17 3188.70,183.80C3188.26,186.09 3190.05,192.48 3190.77,194.57C3193.19,201.63 3195.77,206.08 3199.68,211.88C3200.27,212.76 3200.86,213.62 3201.44,214.48C3204.69,219.25 3209.02,219.01 3211.92,214.56C3213.74,211.74 3217.77,203.13 3219.23,199.95C3220.80,196.51 3223.17,191.38 3224.88,188.12C3225.97,186.05 3227.13,184.73 3229.28,183.78C3230.48,183.25 3231.91,182.77 3231.67,184.80C3231.55,185.83 3230.94,187.20 3230.63,188.14C3229.38,191.91 3227.25,196.99 3225.65,200.64C3223.06,206.55 3219.89,212.46 3216.41,217.70C3215.34,219.31 3213.94,221.25 3212.46,222.49C3211.03,223.69 3208.27,224.79 3205.67,224.40C3205.30,224.34 3205.30,224.14 3205.15,223.81L3204.03,221.68C3203.38,220.65 3202.84,220.02 3202.05,219.29C3200.15,217.52 3198.38,217.49 3195.23,217.37C3190.42,217.20 3187.51,217.62 3182.84,218.03C3181.51,218.15 3180.18,218.26 3178.85,218.40C3176.22,218.68 3173.44,218.93 3170.79,219.06C3168.41,219.18 3164.71,219.23 3162.65,218.47C3159.65,217.36 3160.59,215.15 3161.88,212.88C3162.15,212.40 3162.41,211.95 3162.69,211.51C3163.48,210.28 3164.52,208.79 3165.45,207.71C3166.45,206.56 3168.43,204.17 3170.03,203.55C3172.32,202.66 3172.23,206.83 3174.96,201.41C3175.45,200.45 3175.68,198.93 3174.96,198.02C3173.95,196.73 3172.37,197.92 3171.81,198.14C3172.32,196.38 3172.50,196.30 3172.01,194.38L3171.90,194.23C3171.48,193.58 3171.42,193.55 3170.46,193.54C3169.15,193.61 3167.67,194.53 3166.85,195.10C3165.57,196.00 3162.70,199.03 3161.72,200.30C3161.37,200.75 3160.96,201.15 3160.53,201.67C3157.55,205.31 3154.59,210.20 3152.75,214.52C3152.50,215.09 3152.29,215.82 3152.03,216.36L3151.89,216.19C3151.88,216.18 3151.87,216.16 3151.87,216.14C3151.83,216.09 3151.78,215.97 3151.74,215.89C3150.73,213.83 3149.05,210.55 3147.76,208.80L3141.15,199.15C3140.91,198.80 3140.80,198.59 3140.58,198.28C3138.88,195.85 3134.91,190.10 3133.86,187.37C3131.93,182.36 3135.99,182.61 3139.98,182.56C3143.43,182.52 3155.06,183.46 3157.68,185.40C3158.09,185.71 3158.74,186.39 3158.84,187.16C3159.05,188.98 3157.70,189.76 3161.97,189.80C3163.56,189.82 3165.84,189.66 3166.74,188.71C3166.75,188.70 3166.78,188.68 3166.79,188.67C3167.72,187.96 3167.27,187.91 3167.61,187.39C3167.66,185.98 3166.18,184.64 3165.29,184.20C3162.00,182.58 3155.69,181.11 3152.09,180.59C3146.76,179.82 3141.49,180.02 3136.13,180.34C3134.42,180.44 3132.66,180.49 3131.06,180.94C3125.43,182.55 3126.64,187.60 3129.14,191.57C3130.60,193.91 3132.09,196.01 3133.62,198.31C3133.98,198.86 3134.38,199.39 3134.76,199.96L3139.05,206.14C3139.16,206.30 3139.20,206.40 3139.33,206.61C3139.43,206.76 3139.49,206.83 3139.63,206.99L3142.79,211.59C3144.44,213.89 3146.21,216.50 3145.98,219.49C3145.82,221.47 3145.54,222.93 3143.57,221.29C3142.58,220.46 3141.80,219.30 3140.95,218.33C3139.10,216.22 3137.59,214.07 3135.92,212.13C3135.70,211.86 3135.57,211.61 3135.35,211.34C3135.13,211.06 3134.94,210.82 3134.73,210.53C3131.09,205.48 3127.97,201.11 3124.76,195.20C3123.55,192.98 3121.95,189.92 3121.21,187.52C3120.35,184.72 3120.84,182.02 3122.35,179.61C3122.57,179.26 3122.82,179.07 3122.97,178.75C3115.79,178.18 3112.95,181.53 3115.07,188.54C3116.58,193.52 3120.43,199.82 3123.37,204.11C3124.04,205.09 3124.69,206.06 3125.34,206.97C3125.51,207.22 3125.66,207.38 3125.81,207.63C3125.99,207.91 3126.11,208.06 3126.32,208.32C3127.38,209.61 3128.35,211.16 3129.41,212.46C3130.11,213.33 3130.76,214.27 3131.48,215.14C3131.66,215.36 3131.82,215.60 3132.01,215.82L3137.93,223.07C3136.33,225.06 3137.18,227.99 3138.72,229.29C3140.91,231.15 3144.85,229.94 3147.06,228.49C3150.37,226.33 3151.51,222.69 3153.12,219.12C3154.91,215.15 3156.83,211.09 3159.20,207.57C3159.36,207.33 3159.52,207.17 3159.65,206.96C3160.66,205.42 3161.87,204.00 3163.10,202.65C3163.86,201.81 3164.52,201.22 3165.36,200.46C3165.81,200.06 3166.33,199.88 3167.09,200.02C3167.59,200.12 3168.37,200.39 3168.67,200.69L3167.03,202.36C3166.44,202.89 3165.95,203.56 3165.43,204.15C3163.41,206.43 3160.55,210.91 3159.09,213.48C3158.57,214.39 3157.96,215.46 3157.57,216.47C3156.59,219.00 3156.36,221.23 3158.45,223.13C3160.06,224.60 3162.95,224.95 3165.59,224.95C3174.00,224.96 3182.30,223.60 3190.67,223.07C3194.24,222.85 3196.94,222.90 3199.29,225.30C3199.65,225.67 3200.17,226.15 3199.60,226.72C3198.94,227.37 3197.29,227.58 3196.16,227.81C3191.20,228.78 3185.61,229.69 3180.42,230.05C3174.17,230.49 3169.47,230.64 3163.18,230.31C3160.51,230.17 3157.65,230.08 3155.48,229.03C3154.17,228.40 3153.74,227.93 3152.92,227.07C3151.72,225.82 3151.76,224.79 3151.40,224.08C3150.37,225.06 3148.79,227.61 3148.97,229.83C3149.15,232.08 3150.53,233.54 3152.46,234.61C3158.28,237.86 3175.84,236.07 3182.79,235.37C3186.41,235.00 3190.03,234.38 3193.58,233.73C3194.74,233.52 3195.94,233.24 3197.07,233.03C3197.59,233.58 3197.88,235.09 3200.03,235.55C3203.56,236.30 3205.59,234.24 3206.18,230.89C3206.65,228.22 3205.96,226.68 3205.93,225.96C3206.16,226.60 3207.50,227.99 3207.97,228.44C3208.65,229.10 3209.92,229.80 3211.24,229.83C3212.62,229.85 3213.79,229.24 3214.72,228.66C3215.29,228.31 3215.56,228.07 3216.05,227.65C3217.32,226.59 3218.41,225.35 3219.41,224.01C3228.06,212.50 3235.54,189.77 3235.92,189.21C3236.93,189.04 3237.70,189.39 3239.02,188.40C3239.68,187.90 3240.29,187.12 3240.70,186.17C3242.20,182.70 3237.73,178.71 3233.86,177.77C3231.24,177.13 3229.30,177.55 3226.68,177.81C3221.90,178.26 3216.66,179.05 3211.78,178.51C3209.37,178.24 3207.25,178.10 3204.96,177.44C3204.14,177.21 3202.54,176.91 3202.02,176.47C3201.36,175.92 3201.00,174.59 3201.19,173.40C3201.25,173.39 3204.63,174.24 3205.04,174.34C3208.58,175.26 3215.38,175.55 3218.91,175.35C3222.13,175.16 3224.59,174.66 3225.74,172.34C3226.98,169.84 3225.54,166.59 3224.46,164.65C3223.86,163.58 3223.26,162.57 3222.64,161.57C3220.74,158.56 3218.69,155.53 3216.61,152.68L3210.47,143.98C3210.12,143.50 3209.77,142.99 3209.47,142.50C3207.84,139.86 3206.95,138.30 3207.52,135.00C3207.64,134.29 3207.80,133.53 3208.63,133.69C3209.70,133.90 3210.65,135.33 3211.25,136.05C3212.02,136.98 3212.83,137.78 3213.55,138.72L3217.37,143.49C3217.89,144.17 3218.54,144.92 3218.99,145.64L3221.06,148.54C3221.42,149.05 3221.72,149.46 3222.08,150.00C3224.77,153.99 3227.22,158.09 3229.47,162.42C3230.60,164.60 3231.82,166.89 3232.47,169.29C3233.33,172.46 3232.07,175.32 3230.46,176.74C3231.12,177.23 3233.87,177.02 3234.67,176.82C3236.20,176.44 3236.94,175.86 3237.72,175.05C3239.41,173.30 3239.21,169.83 3238.46,167.29C3237.74,164.84 3236.55,162.78 3235.45,160.74C3233.19,156.57 3230.76,152.73 3228.11,148.86L3226.61,146.75C3225.59,145.36 3224.66,143.97 3223.59,142.62L3222.02,140.57C3221.66,140.09 3221.27,139.70 3220.94,139.23L3219.31,137.25C3219.07,136.98 3218.99,136.80 3218.79,136.57L3215.42,132.67C3215.76,131.91 3216.50,131.26 3216.27,129.59C3216.14,128.59 3215.57,127.39 3215.05,126.82C3213.60,125.22 3211.40,125.10 3208.95,125.94C3207.92,126.29 3207.11,126.84 3206.35,127.33C3205.10,128.15 3204.24,129.19 3203.40,130.33C3203.07,130.78 3202.85,131.12 3202.59,131.55C3201.45,133.44 3200.70,135.40 3200.93,137.71C3201.16,140.01 3205.15,146.54 3206.84,148.75L3208.09,150.51C3209.24,152.31 3211.26,154.96 3212.59,156.93C3213.28,157.93 3214.02,158.85 3214.67,159.89L3216.28,162.28C3217.66,164.52 3219.91,167.76 3220.04,170.49C3220.18,173.31 3217.34,173.33 3214.85,173.29C3211.90,173.24 3205.86,172.62 3203.32,170.87C3202.95,170.62 3202.69,170.12 3202.72,169.43C3202.74,168.76 3202.90,168.25 3202.39,167.96C3201.36,167.38 3198.30,167.54 3197.24,168.17C3195.12,169.43 3195.97,171.08 3197.77,171.98C3197.90,172.04 3198.00,172.08 3198.13,172.14L3198.45,172.38C3197.35,172.30 3195.67,172.56 3195.03,173.21" fill="#830B1B" fill-rule="evenodd"/><path d="M3165.05,164.53C3165.53,164.59 3165.90,164.79 3166.37,164.49C3166.83,164.19 3166.78,163.83 3167.02,163.52C3167.84,160.09 3167.23,158.41 3166.25,155.35C3164.32,149.28 3161.89,144.17 3158.29,139.07C3157.56,138.03 3156.71,137.10 3156.19,136.37C3156.92,136.35 3158.08,136.49 3158.89,136.52C3162.46,136.66 3163.74,136.40 3167.02,136.29C3168.74,136.23 3170.56,135.95 3172.31,135.86C3173.80,135.78 3175.92,135.53 3177.55,135.41C3181.14,135.16 3184.58,134.78 3188.26,134.81C3189.76,134.82 3191.91,135.03 3192.85,135.84C3194.21,137.02 3193.72,138.37 3192.97,139.94C3191.72,142.55 3190.20,144.99 3188.78,147.12C3188.39,147.69 3187.94,148.23 3187.57,148.77L3185.10,151.96C3183.98,153.30 3182.25,155.46 3180.95,156.32C3178.74,157.80 3177.49,156.24 3176.87,155.97C3176.03,155.60 3175.45,156.42 3175.16,156.93C3174.83,157.51 3174.45,158.04 3174.10,158.66C3173.31,160.08 3172.84,161.08 3172.96,163.04C3173.21,163.40 3172.89,163.45 3173.49,164.10L3173.61,164.24C3174.73,164.96 3176.70,164.56 3177.62,163.84C3179.62,162.31 3181.46,160.67 3183.21,158.88C3183.66,158.41 3184.01,157.94 3184.46,157.49L3185.71,156.11C3189.15,151.90 3191.44,148.13 3193.96,143.34C3194.86,141.61 3196.69,137.91 3197.25,136.16C3198.25,133.04 3197.14,130.47 3194.19,129.38C3191.45,128.36 3187.66,128.84 3184.65,129.06C3183.06,129.18 3181.30,129.24 3179.76,129.45C3178.19,129.66 3176.51,129.67 3174.93,129.87C3173.35,130.08 3171.74,130.14 3170.14,130.31C3168.56,130.48 3166.89,130.59 3165.29,130.72C3161.85,131.01 3158.86,131.32 3156.36,129.54C3155.56,128.98 3153.63,127.67 3155.59,126.81C3157.54,125.95 3166.60,124.73 3168.97,124.37C3175.34,123.42 3182.21,123.11 3188.79,123.21C3194.26,123.28 3200.30,123.49 3202.83,128.81C3202.96,129.10 3203.07,129.49 3203.25,129.73C3203.62,129.45 3204.50,127.74 3204.77,127.11C3205.19,126.12 3205.57,124.90 3205.46,123.63C3205.26,121.23 3203.56,119.84 3201.72,119.06C3197.58,117.31 3191.93,117.08 3187.02,117.28C3185.67,117.34 3184.39,117.34 3183.05,117.44C3181.78,117.54 3180.46,117.65 3179.19,117.73C3176.72,117.88 3174.18,118.28 3171.75,118.55C3168.11,118.97 3164.54,119.58 3160.97,120.22C3159.86,120.42 3158.40,120.78 3157.33,120.88C3157.03,119.88 3156.14,119.05 3155.21,118.64C3154.17,118.19 3152.65,118.02 3151.53,118.47C3149.72,119.20 3148.50,121.36 3148.20,123.86C3147.87,126.62 3148.49,128.98 3149.66,130.98L3151.43,133.57C3152.10,134.42 3152.69,135.24 3153.31,136.06C3157.19,141.18 3160.67,146.65 3162.66,152.92C3162.90,153.66 3163.52,155.68 3163.47,156.46C3163.40,157.43 3162.08,158.63 3161.28,158.76C3160.35,154.82 3158.93,151.28 3157.09,147.79C3156.52,146.70 3155.92,145.50 3155.32,144.52C3153.86,142.16 3152.88,140.22 3150.86,138.89C3148.31,137.21 3145.71,138.47 3143.94,140.48C3142.26,142.40 3141.27,144.43 3140.06,146.69C3138.92,148.85 3137.80,151.20 3136.76,153.49C3135.71,155.82 3134.66,158.07 3133.60,160.42C3132.54,162.78 3131.53,165.09 3130.37,167.36C3129.74,168.59 3129.23,169.41 3128.40,170.43C3127.73,171.26 3126.77,171.99 3125.42,172.50C3123.47,173.25 3122.83,172.94 3123.38,170.69C3123.67,169.50 3124.25,168.07 3124.65,166.92C3126.34,162.06 3128.31,157.14 3130.57,152.57C3131.69,150.32 3132.76,148.01 3134.00,145.90C3134.64,144.82 3135.20,143.74 3135.84,142.70C3136.52,141.59 3137.11,140.67 3137.78,139.59C3138.71,138.07 3140.81,134.95 3142.07,133.78C3143.38,132.56 3145.33,131.49 3147.36,131.48C3148.19,131.47 3148.86,131.77 3149.52,131.83C3148.90,129.70 3147.33,127.39 3145.19,126.64C3143.85,126.16 3142.39,126.27 3141.18,126.79C3138.88,127.77 3137.45,129.33 3135.98,131.16C3134.60,132.89 3133.37,135.11 3132.24,137.06C3131.65,138.09 3131.09,139.10 3130.49,140.13C3128.37,143.80 3125.88,149.12 3124.24,153.09C3122.83,156.49 3121.44,159.96 3120.21,163.44C3119.80,164.60 3119.42,165.93 3119.00,167.04C3117.59,167.03 3116.70,167.18 3115.83,167.88C3115.22,168.38 3114.46,169.27 3114.12,170.24C3113.60,171.75 3114.12,173.66 3115.21,174.77C3115.85,175.43 3116.43,176.16 3117.30,176.67C3117.71,176.91 3118.12,177.16 3118.61,177.39C3122.28,179.09 3128.36,179.53 3131.28,176.41C3131.96,175.69 3132.38,174.91 3132.98,174.04C3134.07,172.48 3135.08,170.66 3135.94,168.94C3138.66,163.52 3140.92,157.83 3143.58,152.40C3144.76,149.98 3146.36,146.87 3148.17,144.93C3151.37,141.51 3153.21,144.95 3154.70,147.71C3155.61,149.39 3156.48,151.39 3157.12,153.35C3157.40,154.19 3157.85,155.60 3157.96,156.49C3158.15,158.05 3158.25,158.82 3157.06,159.48C3156.24,159.93 3155.50,160.06 3156.48,161.97C3156.83,162.64 3157.60,163.98 3158.14,164.37C3158.70,164.79 3160.11,165.71 3161.05,164.97C3162.29,163.99 3161.54,162.41 3161.81,161.84C3162.18,162.45 3162.64,163.18 3163.07,163.51C3163.47,163.82 3164.32,164.48 3165.05,164.53" fill="#830B1B" fill-rule="evenodd"/><path d="M3171.00,177.77C3175.25,176.57 3176.37,172.24 3180.04,172.01C3179.65,176.30 3180.50,176.89 3180.85,179.92C3180.99,181.11 3180.75,181.67 3180.70,182.74C3180.54,182.71 3179.90,182.17 3179.61,182.00C3176.51,180.22 3175.05,180.41 3173.05,179.37C3172.34,179.00 3172.01,178.70 3171.44,178.27C3171.18,178.08 3171.09,178.09 3171.00,177.77M3167.02,163.52C3166.78,163.83 3166.83,164.19 3166.37,164.49C3165.90,164.79 3165.53,164.59 3165.05,164.53L3165.30,164.70C3162.93,166.07 3162.49,169.12 3162.87,171.69C3163.11,173.36 3163.81,175.78 3165.04,176.76C3165.34,176.99 3166.06,177.51 3166.60,177.61C3166.42,178.15 3164.68,179.58 3168.35,180.76C3169.12,181.00 3169.94,181.14 3170.74,181.39C3172.70,181.98 3175.51,182.95 3177.03,184.05C3181.40,187.23 3179.13,194.92 3173.40,193.62C3171.95,193.30 3170.35,192.15 3169.67,191.42C3169.12,190.84 3167.52,188.74 3167.61,187.39C3167.27,187.91 3167.72,187.96 3166.79,188.67C3166.78,188.68 3166.75,188.70 3166.74,188.71C3167.06,188.86 3166.84,188.68 3167.15,189.42C3167.45,190.16 3167.83,190.79 3168.32,191.41C3168.63,191.82 3168.94,192.19 3169.31,192.53C3169.52,192.71 3169.63,192.86 3169.86,193.03C3170.03,193.15 3170.35,193.38 3170.46,193.54C3171.42,193.55 3171.48,193.58 3171.90,194.23L3172.01,194.38C3172.13,194.30 3171.99,194.33 3172.30,194.43C3172.46,194.48 3172.58,194.53 3172.76,194.58C3175.38,195.31 3177.23,194.14 3179.19,192.98C3179.61,192.72 3180.19,192.26 3180.52,191.97C3180.96,191.58 3181.23,191.16 3181.61,190.65C3182.40,189.56 3182.54,188.45 3182.66,186.88C3182.98,186.85 3184.14,187.23 3184.60,186.11C3184.93,185.33 3184.61,184.43 3184.39,183.70C3183.17,179.53 3181.43,172.81 3185.54,170.47C3190.14,167.86 3195.06,171.81 3192.86,177.72C3192.19,179.49 3191.76,179.94 3190.67,181.11C3190.58,181.21 3190.63,181.14 3190.55,181.25C3191.05,181.25 3191.50,181.38 3191.87,181.50L3191.97,181.56C3191.97,181.44 3191.99,181.47 3191.87,181.50C3192.00,181.19 3192.44,180.65 3192.65,180.30C3193.24,179.36 3193.56,178.76 3193.95,177.68C3194.06,177.35 3194.18,176.38 3194.33,176.17L3194.41,176.24L3194.49,176.32L3194.56,176.39L3194.63,176.47L3194.72,176.53L3194.80,176.60L3194.90,176.65L3194.99,176.70L3195.10,176.80C3195.10,176.65 3195.14,176.68 3194.99,176.70L3194.90,176.65L3194.80,176.60L3194.72,176.53L3194.63,176.47L3194.56,176.39L3194.49,176.32L3194.41,176.24L3194.33,176.17C3194.09,175.77 3193.09,174.74 3194.32,173.84L3194.93,173.29C3194.94,173.28 3194.97,173.26 3194.98,173.25C3194.99,173.25 3195.01,173.23 3195.03,173.21C3194.56,173.45 3194.71,173.47 3194.48,173.62C3194.28,173.77 3194.47,173.66 3194.26,173.73C3193.91,171.55 3193.08,170.63 3191.71,169.59C3191.05,169.09 3190.74,168.84 3189.82,168.40C3185.07,166.10 3182.92,168.37 3182.27,168.57C3182.30,167.98 3182.38,167.05 3180.96,167.00C3180.03,166.96 3179.52,167.69 3179.05,168.12C3178.48,168.64 3178.02,169.09 3177.49,169.58C3176.91,170.11 3176.48,170.46 3175.89,171.07L3175.10,171.79C3172.47,173.94 3168.86,176.16 3165.70,173.24C3165.27,172.84 3164.71,172.21 3164.38,171.54C3163.66,170.09 3163.71,167.94 3164.60,166.71C3166.20,164.53 3169.92,163.18 3173.61,164.24L3173.49,164.10C3172.89,163.45 3173.21,163.40 3172.96,163.04C3172.82,163.12 3173.02,163.06 3172.81,163.08C3172.55,163.10 3171.71,162.67 3169.73,162.88C3169.14,162.94 3168.14,163.20 3167.57,163.43C3167.28,163.55 3167.28,163.59 3167.10,163.56C3166.77,163.52 3167.28,163.87 3167.02,163.52" fill="#90732C" fill-rule="evenodd"/><path d="M3182.58,213.15C3182.21,212.87 3182.21,212.31 3182.90,212.39C3183.16,212.69 3183.17,213.20 3182.58,213.15M3172.45,216.81C3172.62,217.62 3174.52,218.62 3176.20,217.63C3177.29,216.98 3177.83,215.58 3177.67,213.90C3178.29,214.11 3178.30,214.54 3180.39,215.04C3181.25,215.24 3183.28,215.20 3184.16,215.05C3186.26,214.67 3187.24,214.68 3189.29,215.26C3189.77,215.40 3190.37,215.68 3190.83,215.78C3190.64,213.71 3189.10,211.61 3187.81,211.02C3187.83,210.82 3188.88,208.04 3188.26,207.40C3187.83,207.07 3186.87,207.20 3186.32,207.35C3185.76,207.49 3185.09,207.96 3184.72,208.02C3184.25,207.62 3184.53,207.65 3183.47,206.84C3183.02,206.51 3182.45,206.15 3181.78,206.05C3180.18,205.80 3178.76,206.48 3178.49,207.73C3179.70,207.77 3180.55,207.71 3181.11,208.53C3181.99,209.81 3180.49,212.16 3178.01,211.33C3175.10,210.36 3175.79,206.26 3177.45,204.50C3178.52,203.35 3179.68,203.17 3181.26,203.16C3181.98,203.16 3182.41,203.14 3182.40,202.54C3181.02,201.77 3178.48,202.28 3177.27,203.03C3176.01,203.81 3175.12,204.89 3174.62,206.71C3173.54,210.61 3175.25,214.43 3173.54,216.25C3173.07,216.74 3172.99,216.54 3172.45,216.81" fill="#90732C" fill-rule="evenodd"/><path d="M3173.17,141.83C3173.68,141.54 3174.02,142.25 3173.60,142.50C3173.09,142.79 3172.73,142.09 3173.17,141.83M3178.43,140.98C3177.88,140.80 3177.12,140.05 3175.58,139.86C3174.34,139.71 3173.08,139.72 3171.84,139.91C3169.70,140.23 3168.93,140.35 3166.74,139.73C3166.29,139.61 3165.55,139.29 3165.23,139.25C3165.25,140.07 3165.89,141.51 3166.29,142.07C3166.98,143.03 3167.17,143.34 3168.30,143.96C3168.18,144.75 3167.42,145.81 3167.80,147.62C3168.42,147.76 3169.18,147.78 3169.82,147.60C3170.47,147.42 3170.96,147.03 3171.39,146.91C3172.23,147.68 3172.95,148.61 3174.45,148.89C3176.03,149.18 3177.78,147.97 3177.59,147.18C3177.10,147.04 3175.70,147.42 3175.01,146.38C3174.16,145.10 3175.59,142.73 3178.13,143.56C3181.27,144.59 3180.19,148.68 3178.77,150.37C3178.37,150.85 3177.48,151.38 3176.61,151.60C3175.82,151.80 3173.97,151.42 3173.78,152.26C3174.14,152.84 3175.68,152.83 3176.47,152.67C3179.00,152.18 3180.75,151.06 3181.53,148.24C3182.61,144.31 3180.83,140.31 3182.61,138.54C3182.86,138.30 3183.00,138.23 3183.33,138.14C3183.59,138.07 3183.47,138.15 3183.67,138.02C3182.83,136.20 3178.04,135.94 3178.43,140.98" fill="#90732C" fill-rule="evenodd"/><path d="M3209.53,190.78C3208.75,191.09 3208.49,190.31 3209.20,190.05C3209.59,190.19 3209.67,190.35 3209.53,190.78M3207.75,195.42C3207.76,195.41 3207.78,195.39 3207.80,195.39C3209.18,194.54 3209.02,194.82 3210.31,193.28C3211.80,191.50 3212.10,188.80 3213.47,187.19C3214.32,186.18 3215.49,185.20 3215.75,184.87C3215.58,184.74 3215.68,184.81 3215.44,184.74L3214.33,184.49C3211.67,184.03 3210.99,184.94 3210.08,185.18C3209.64,184.61 3208.27,183.05 3207.14,182.99C3206.30,183.83 3206.14,184.85 3206.07,186.38C3205.61,186.62 3204.77,186.73 3204.19,187.02C3202.45,187.91 3201.52,189.98 3202.43,191.35C3202.58,191.58 3202.53,191.56 3202.72,191.67C3202.95,191.51 3202.89,191.50 3203.09,191.12C3204.80,187.89 3208.27,191.36 3205.76,193.78C3203.33,196.13 3200.20,193.22 3199.50,191.33C3198.44,188.43 3200.76,187.06 3200.31,185.86C3199.55,185.74 3198.88,187.15 3198.64,187.72C3197.33,190.72 3198.27,193.29 3200.50,195.08C3202.26,196.50 3202.78,196.66 3204.85,197.66C3205.71,198.07 3206.38,198.50 3206.97,199.01C3208.30,200.14 3207.74,201.13 3207.71,201.44C3208.62,201.49 3209.19,200.96 3209.57,200.54C3210.71,199.28 3210.52,197.19 3208.64,195.91C3208.37,195.73 3208.01,195.61 3207.75,195.42" fill="#90732C" fill-rule="evenodd"/><path d="M3144.28,165.82C3144.47,165.20 3145.07,165.30 3145.11,165.74C3145.16,166.22 3144.54,166.47 3144.28,165.82M3146.18,160.81C3146.06,160.97 3145.38,161.31 3144.81,161.76C3143.47,162.83 3142.70,164.28 3142.02,165.98C3140.87,168.84 3140.78,168.88 3138.79,170.81L3138.18,171.39C3138.89,171.93 3141.27,172.06 3142.57,171.65C3143.09,171.49 3143.49,171.20 3143.83,171.08C3144.14,171.78 3145.64,172.99 3146.68,173.32C3147.29,172.77 3147.71,172.00 3147.82,170.86C3147.92,169.77 3147.51,169.97 3148.47,169.72C3148.93,169.60 3149.38,169.44 3149.78,169.22C3152.23,167.94 3152.18,165.26 3151.20,164.62C3150.70,164.96 3150.74,166.02 3149.52,166.40C3148.45,166.73 3147.71,165.89 3147.43,165.15C3146.73,163.31 3148.79,161.27 3150.54,161.65C3153.17,162.24 3155.45,165.00 3154.46,167.87C3154.02,169.15 3153.28,169.55 3153.59,170.43C3154.28,170.54 3154.98,169.24 3155.22,168.70C3156.67,165.35 3155.61,163.33 3153.49,161.27C3152.36,160.18 3150.78,159.45 3149.11,158.64C3147.99,158.11 3146.75,157.40 3146.23,156.32C3145.88,155.62 3146.12,155.44 3146.22,154.83C3144.25,154.77 3142.56,157.49 3144.48,159.73C3144.74,160.03 3145.64,160.67 3146.18,160.81" fill="#90732C" fill-rule="evenodd"/><path d="M3204.32,155.60C3203.87,155.96 3203.37,155.70 3203.57,155.23C3203.73,154.88 3204.41,154.86 3204.32,155.60M3199.87,151.90C3198.42,152.10 3197.32,152.52 3196.47,153.21C3196.57,154.83 3198.27,155.58 3198.83,156.02C3198.73,156.82 3197.94,158.47 3198.78,159.97C3199.27,160.85 3200.18,161.92 3201.68,161.62C3201.61,161.07 3200.57,160.22 3201.05,159.02C3201.62,157.61 3204.30,157.44 3205.04,160.04C3205.41,161.32 3205.02,162.06 3204.39,162.74C3202.78,164.48 3198.84,165.09 3197.05,162.53C3196.81,162.18 3196.61,161.84 3196.38,161.46C3195.67,160.28 3194.87,160.51 3195.56,161.99C3196.10,163.15 3196.93,164.07 3197.95,164.79C3199.51,165.90 3201.46,165.93 3203.40,165.29C3206.88,164.14 3209.32,161.04 3211.62,161.58C3212.29,161.74 3212.31,162.13 3212.68,162.28C3212.96,161.40 3213.16,161.10 3212.75,160.09C3212.21,158.73 3210.75,157.97 3209.31,158.31C3208.25,158.56 3207.80,159.05 3207.42,159.16C3207.57,157.38 3207.00,155.58 3206.02,154.23C3205.70,153.78 3205.50,153.37 3205.12,152.95C3203.67,151.30 3202.87,149.76 3202.43,146.90C3201.89,147.13 3201.00,148.27 3200.65,148.90C3200.07,149.92 3199.88,150.55 3199.87,151.90" fill="#90732C" fill-rule="evenodd"/><path d="M3147.86,197.83C3148.15,196.94 3149.22,197.69 3148.34,198.23C3147.96,198.18 3147.97,198.15 3147.86,197.83M3153.38,197.15C3153.51,196.40 3153.75,196.08 3153.78,195.12C3153.80,194.30 3153.75,193.81 3153.40,193.15C3152.49,191.47 3150.67,191.27 3150.56,191.67C3150.50,191.90 3152.25,193.84 3150.55,194.92C3150.04,195.24 3149.23,195.26 3148.66,195.03C3147.01,194.38 3146.40,191.79 3147.91,190.40C3148.54,189.81 3149.88,189.05 3151.14,188.98C3155.70,188.69 3155.43,192.72 3156.88,192.44C3157.04,191.51 3156.37,190.55 3155.93,190.01C3154.05,187.66 3151.87,186.90 3148.72,187.96C3145.34,189.11 3142.75,192.26 3140.56,191.68C3139.84,191.49 3140.03,191.10 3139.49,191.01C3138.94,192.67 3139.59,193.99 3140.76,194.64C3142.54,195.63 3143.98,194.41 3144.79,194.05C3144.27,197.22 3146.85,199.78 3148.09,201.47C3148.89,202.58 3149.66,204.90 3149.74,206.29C3150.35,206.07 3151.21,204.92 3151.59,204.24C3152.31,202.96 3152.15,202.70 3152.41,201.24C3153.94,201.10 3154.85,200.64 3155.75,199.98C3155.70,198.41 3153.97,197.64 3153.38,197.15" fill="#90732C" fill-rule="evenodd"/><path d="M3144.56,255.89C3144.46,256.45 3145.04,256.48 3145.98,256.76C3146.50,256.91 3147.49,257.30 3147.95,257.24C3148.16,256.43 3147.07,256.82 3147.69,255.56L3149.95,252.02C3150.08,251.82 3150.23,251.45 3150.50,251.41C3150.68,252.42 3150.23,257.20 3150.45,258.10L3152.47,258.78C3153.89,259.26 3152.64,257.27 3153.39,255.99L3154.76,253.89C3155.05,253.42 3155.24,252.99 3155.55,252.98C3155.59,253.59 3155.51,257.66 3155.29,258.27C3154.97,259.17 3154.59,258.54 3154.23,259.07C3154.32,259.47 3154.63,259.43 3155.29,259.65L3158.44,260.65C3158.64,260.72 3158.74,260.77 3158.94,260.73C3159.18,260.69 3159.05,260.72 3159.13,260.66C3159.51,260.21 3158.34,260.38 3158.19,258.58C3158.12,257.70 3158.15,251.88 3158.15,250.54C3157.78,250.31 3156.01,249.72 3155.59,249.83C3155.43,251.01 3155.47,250.90 3154.62,252.10L3153.60,253.56C3153.44,253.83 3153.43,253.91 3153.15,253.96L3153.13,249.43C3153.13,248.77 3153.21,248.94 3151.87,248.53C3150.78,248.21 3150.61,247.97 3150.52,248.75C3150.44,249.49 3150.09,249.73 3149.80,250.21L3146.17,255.32C3145.46,255.93 3145.40,255.65 3144.56,255.89" fill="#830B1B" fill-rule="evenodd"/><path d="M3258.10,172.26C3256.72,172.43 3255.70,173.19 3255.17,173.90C3252.86,177.00 3254.84,181.74 3259.51,181.22C3261.78,180.97 3263.60,178.70 3263.26,176.01C3262.96,173.62 3260.68,171.96 3258.10,172.26" fill="#830B1B" fill-rule="evenodd"/><path d="M3095.23,172.26C3089.71,172.85 3089.89,181.76 3096.47,181.23C3097.87,181.11 3098.77,180.27 3099.37,179.60C3100.17,178.69 3100.43,177.57 3100.32,176.09C3100.13,173.76 3097.88,171.97 3095.23,172.26" fill="#830B1B" fill-rule="evenodd"/><path d="M3240.72,119.59C3241.03,119.37 3241.06,119.46 3241.29,119.72C3241.42,119.85 3241.61,120.06 3241.70,120.21C3241.98,120.66 3241.77,121.24 3241.55,121.63C3241.30,122.07 3240.34,123.29 3239.51,123.09C3239.24,123.02 3238.76,122.40 3238.59,122.19C3238.10,121.61 3238.24,121.65 3238.79,121.21C3238.98,121.06 3239.08,120.94 3239.27,120.78C3239.90,120.26 3240.03,120.07 3240.72,119.59M3239.00,115.91C3238.86,116.44 3239.29,116.59 3238.98,117.25C3238.68,117.92 3238.26,118.08 3237.78,118.54L3235.52,120.50C3235.34,120.67 3235.26,120.74 3235.08,120.89C3234.91,121.03 3234.84,121.15 3234.66,121.29C3233.01,122.66 3232.95,121.87 3232.26,121.84C3232.10,122.11 3231.90,122.06 3232.69,122.89L3234.47,124.88C3234.73,125.20 3234.97,125.80 3235.53,125.64C3235.58,125.16 3235.28,125.04 3235.44,124.49C3235.61,123.87 3237.12,122.53 3237.50,122.53C3237.71,122.92 3237.37,123.23 3237.16,123.65C3236.55,124.92 3236.09,126.42 3236.73,127.74C3237.84,130.05 3240.56,129.36 3240.48,127.43C3240.06,127.10 3239.75,127.01 3239.49,126.41C3239.27,125.91 3239.14,125.21 3239.24,124.66C3239.76,124.51 3241.17,125.94 3242.95,124.54C3243.79,123.87 3244.37,122.41 3243.71,120.99C3243.54,120.63 3242.25,119.17 3241.80,118.68L3239.77,116.34C3239.60,116.16 3239.38,115.76 3239.00,115.91" fill="#830B1B" fill-rule="evenodd"/><path d="M3226.07,241.13L3224.48,239.12C3224.26,238.78 3223.72,238.43 3224.18,238.04C3224.51,237.76 3224.89,237.44 3225.46,237.54C3226.21,237.66 3227.17,238.60 3227.42,239.20C3227.67,239.78 3227.57,240.16 3227.18,240.44C3226.93,240.61 3226.37,241.09 3226.07,241.13M3226.01,247.25C3226.22,247.37 3226.32,247.24 3226.51,247.08C3226.75,246.87 3226.81,246.85 3227.03,246.69C3227.22,246.55 3227.33,246.45 3227.53,246.28L3229.57,244.72C3230.07,244.39 3229.91,244.09 3229.55,244.08C3229.29,244.08 3228.74,244.49 3227.92,243.52C3227.73,243.29 3227.52,242.98 3227.33,242.75C3227.13,242.52 3226.75,242.23 3226.92,241.99C3227.21,241.66 3227.87,242.48 3229.17,242.94C3231.25,243.68 3233.36,242.87 3233.56,241.15C3233.69,240.02 3232.96,239.43 3232.03,239.25C3231.49,239.61 3231.52,239.98 3230.68,240.24C3230.31,240.35 3228.80,240.66 3229.13,240.00C3229.81,238.66 3230.00,237.72 3229.03,236.46C3228.43,235.68 3227.03,235.06 3225.66,235.68C3225.13,235.92 3220.35,239.72 3220.33,239.77C3220.08,240.38 3221.16,239.86 3221.77,240.25C3222.03,240.42 3222.80,241.26 3222.95,241.48L3223.97,242.79C3224.13,243.02 3224.29,243.24 3224.45,243.45C3224.81,243.96 3225.57,244.75 3225.96,245.48C3226.53,246.55 3225.57,246.91 3226.01,247.25" fill="#830B1B" fill-rule="evenodd"/><path d="M3113.52,119.98C3113.53,119.62 3113.65,119.52 3113.83,119.33C3114.29,118.86 3114.52,118.48 3115.78,119.05C3116.33,119.30 3117.55,120.19 3117.24,121.01C3117.16,121.22 3116.59,121.89 3116.45,122.03C3116.06,122.41 3115.64,121.86 3115.38,121.64L3113.52,119.98M3110.20,122.16C3110.88,122.38 3111.05,121.40 3112.54,122.67L3114.33,124.27C3115.17,125.09 3116.40,125.99 3116.84,126.73C3117.28,127.46 3116.91,127.56 3116.89,128.12L3117.14,128.33C3117.45,128.20 3117.86,127.71 3118.05,127.47L3119.71,125.59C3120.27,125.05 3120.43,124.91 3120.33,124.52C3119.53,124.26 3119.82,125.62 3117.58,123.59C3117.29,123.33 3116.93,123.22 3117.03,122.77C3117.47,122.70 3118.36,123.34 3119.56,123.48C3124.44,124.05 3124.22,118.87 3121.51,119.34C3121.18,119.96 3121.13,120.35 3119.97,120.73C3118.18,121.33 3119.05,120.53 3119.14,119.61C3119.32,117.90 3118.02,116.45 3116.40,116.44C3115.07,116.44 3114.30,117.21 3113.57,118.09C3112.86,118.96 3111.53,120.31 3110.72,121.27C3110.32,121.74 3110.13,121.68 3110.20,122.16" fill="#830B1B" fill-rule="evenodd"/><path d="M3252.84,148.96C3253.42,147.68 3252.71,146.31 3251.39,146.28C3250.07,146.25 3249.39,147.43 3249.31,148.72C3249.23,150.04 3249.67,151.32 3250.14,152.37C3250.63,153.45 3251.32,154.36 3252.22,154.81C3253.61,155.51 3254.69,154.66 3255.16,153.70C3255.70,152.61 3255.80,151.28 3256.01,150.03C3256.11,149.44 3256.26,148.74 3256.53,148.29C3257.35,146.93 3258.77,149.06 3258.10,150.15C3257.78,150.67 3257.12,150.72 3256.33,150.74C3255.72,151.85 3256.34,153.30 3257.49,153.47C3258.79,153.67 3259.54,152.36 3259.71,151.16C3260.35,146.79 3255.32,142.88 3253.77,146.73C3253.06,148.49 3253.13,151.30 3252.33,152.07C3251.43,152.92 3250.49,150.48 3251.17,149.56C3251.65,148.91 3252.05,149.16 3252.84,148.96" fill="#830B1B" fill-rule="evenodd"/><path d="M3126.92,106.58C3127.55,106.70 3127.95,106.09 3128.89,107.31C3129.19,107.70 3129.91,108.58 3130.11,109.02C3129.93,109.40 3127.95,110.75 3127.85,110.74C3127.47,110.57 3127.37,110.27 3127.13,109.96C3126.90,109.63 3126.71,109.41 3126.50,109.09C3125.53,107.62 3126.59,107.37 3126.27,106.90C3126.01,106.69 3124.61,107.88 3124.16,108.19L3123.12,108.96C3122.80,109.24 3122.18,109.46 3122.33,109.86C3122.63,110.34 3123.08,109.11 3124.44,110.85L3126.93,114.23C3128.70,116.53 3127.45,116.61 3127.68,117.25C3128.12,117.38 3128.46,116.97 3128.78,116.73L3130.81,115.22C3131.13,115.00 3131.63,114.73 3131.73,114.39L3131.58,114.18C3131.19,114.15 3130.55,114.64 3129.66,113.46C3129.42,113.15 3129.33,112.99 3129.06,112.63C3128.87,112.37 3128.59,112.02 3128.48,111.73C3128.72,111.41 3129.19,111.13 3129.54,110.86C3129.75,110.70 3129.91,110.60 3130.11,110.45C3130.83,109.90 3130.76,109.81 3131.47,110.82C3131.69,111.14 3131.91,111.39 3132.10,111.69C3133.09,113.23 3132.10,113.18 3132.26,113.88C3132.70,114.03 3133.81,113.01 3134.43,112.59C3134.76,112.37 3135.19,112.05 3135.48,111.83C3135.85,111.54 3136.41,111.34 3136.24,110.87C3135.76,110.70 3135.24,111.54 3133.86,109.56L3132.75,108.04C3132.27,107.36 3130.82,105.47 3130.69,104.89C3130.58,104.36 3130.72,104.29 3130.91,103.93C3131.10,103.57 3130.82,103.39 3130.47,103.57L3127.41,105.80C3127.13,105.99 3126.84,106.15 3126.92,106.58" fill="#830B1B" fill-rule="evenodd"/><path d="M3100.44,150.31C3100.43,149.94 3100.69,149.25 3100.83,148.90C3101.39,147.50 3104.24,148.31 3104.33,149.26C3104.36,149.55 3104.04,150.33 3103.93,150.64C3103.69,151.33 3103.81,151.55 3103.00,151.26C3102.36,151.03 3100.87,150.58 3100.44,150.31M3096.65,149.05C3096.61,148.67 3096.77,148.18 3096.95,147.88C3097.12,147.60 3097.48,147.44 3097.94,147.44C3098.64,147.44 3099.74,147.84 3099.83,148.35C3099.88,148.60 3099.62,149.23 3099.54,149.48C3099.35,150.05 3099.29,149.96 3098.71,149.75C3098.02,149.50 3097.30,149.28 3096.65,149.05M3103.04,155.35C3103.45,155.32 3103.46,155.14 3103.57,154.80C3104.10,153.21 3105.28,150.14 3105.59,148.98C3106.11,147.10 3104.81,145.10 3102.78,145.36C3102.00,145.46 3101.70,146.03 3101.14,146.03C3100.55,145.46 3100.30,144.76 3099.00,144.63C3096.57,144.39 3096.13,146.96 3095.61,148.49C3095.30,149.39 3094.99,150.27 3094.68,151.18C3094.60,151.41 3094.11,152.51 3094.66,152.36C3095.00,152.27 3094.86,151.77 3095.84,151.74C3096.43,151.72 3100.47,153.19 3101.30,153.50C3103.47,154.31 3102.61,154.61 3103.04,155.35" fill="#830B1B" fill-rule="evenodd"/><path d="M3169.61,257.61C3169.79,257.54 3170.83,257.66 3171.09,257.70C3172.47,257.92 3172.41,260.44 3171.78,261.04C3171.49,261.32 3170.79,261.18 3170.33,261.14C3169.68,261.08 3169.25,261.20 3169.29,260.51C3169.33,259.86 3169.46,258.09 3169.61,257.61M3169.71,256.49C3169.65,255.90 3169.78,254.63 3169.86,254.01C3169.92,253.48 3170.15,253.56 3170.71,253.60C3171.21,253.63 3171.36,253.72 3171.56,254.00C3171.94,254.53 3171.92,255.50 3171.68,256.13C3171.53,256.52 3171.38,256.63 3170.86,256.61C3170.48,256.59 3170.02,256.57 3169.71,256.49M3165.36,261.38C3165.44,261.86 3165.72,261.77 3166.26,261.81C3166.67,261.83 3167.08,261.88 3167.48,261.91C3168.32,261.98 3169.14,262.05 3169.99,262.13C3171.83,262.29 3173.30,262.59 3174.39,261.47C3175.38,260.47 3175.46,258.60 3174.25,257.72C3173.47,257.15 3174.24,257.32 3174.65,256.00C3174.91,255.17 3174.75,254.44 3174.36,253.84C3173.53,252.58 3172.18,252.69 3170.33,252.52L3166.56,252.19C3166.30,252.19 3166.12,252.23 3166.17,252.50C3166.22,252.77 3166.31,252.66 3166.58,252.81C3167.56,253.33 3166.97,256.30 3166.88,257.49C3166.81,258.25 3166.77,259.24 3166.63,259.96C3166.37,261.33 3166.07,260.85 3165.36,261.38" fill="#830B1B" fill-rule="evenodd"/><path d="M3202.63,99.14C3202.69,98.58 3202.27,98.65 3201.71,98.51C3200.89,98.30 3198.28,97.51 3197.88,97.68C3197.72,98.36 3198.44,97.95 3198.55,98.95C3198.60,99.43 3198.43,100.33 3198.28,100.74C3198.07,101.36 3197.32,101.06 3196.91,100.82C3194.57,99.42 3195.16,94.68 3197.24,93.66C3198.42,93.09 3199.53,94.06 3199.55,95.16C3199.56,95.98 3198.96,96.25 3199.22,96.69C3200.05,98.12 3202.95,97.51 3202.37,95.14C3202.12,94.16 3201.15,93.34 3200.38,92.91C3198.30,91.75 3195.55,91.90 3194.05,93.34C3192.08,95.23 3191.43,99.86 3195.09,101.66C3195.99,102.11 3197.48,102.53 3198.65,102.32C3199.83,102.11 3199.37,102.47 3200.09,102.77C3200.47,102.93 3200.54,102.75 3200.63,102.40C3200.79,101.72 3201.06,100.49 3201.34,99.95C3201.82,99.05 3202.01,99.55 3202.63,99.14" fill="#830B1B" fill-rule="evenodd"/><path d="M3130.89,240.47C3130.56,242.09 3129.45,243.54 3128.51,244.14C3126.61,245.33 3125.40,244.07 3125.81,241.90C3126.09,240.44 3126.99,238.96 3128.16,238.21C3130.06,237.00 3131.33,238.25 3130.89,240.47M3127.34,236.07C3126.63,236.19 3126.02,236.53 3125.54,236.88C3124.79,237.43 3124.80,237.36 3124.25,238.15C3122.47,240.65 3122.99,243.52 3125.32,245.18C3126.41,245.95 3127.58,246.56 3129.37,246.20C3133.51,245.37 3135.11,239.69 3131.36,237.10C3130.25,236.34 3129.09,235.79 3127.34,236.07" fill="#830B1B" fill-rule="evenodd"/><path d="M3212.23,245.65C3213.09,245.32 3214.03,245.94 3214.50,246.31C3216.72,248.03 3217.62,251.53 3215.82,252.12C3213.19,253.00 3209.36,246.76 3212.23,245.65M3213.71,243.81C3209.77,244.24 3207.67,248.15 3209.45,251.14C3209.78,251.69 3210.16,252.28 3210.52,252.63C3213.61,255.71 3219.48,253.18 3219.14,248.60C3219.03,247.17 3218.18,245.78 3217.50,245.12C3216.75,244.39 3215.31,243.63 3213.71,243.81" fill="#830B1B" fill-rule="evenodd"/><path d="M3244.59,136.77C3245.13,136.43 3245.89,136.05 3246.49,135.69C3247.12,135.32 3247.78,134.94 3248.41,134.59C3249.07,134.22 3249.68,133.86 3250.32,133.49C3250.71,133.26 3250.98,133.00 3251.24,133.49C3251.45,133.88 3251.48,134.42 3251.34,134.89C3250.60,137.55 3246.18,139.76 3245.10,137.90C3244.90,137.55 3244.61,137.22 3244.59,136.77M3249.70,129.39C3249.48,130.28 3250.18,130.34 3248.48,131.42C3247.77,131.88 3243.84,134.19 3243.17,134.26C3242.28,134.36 3242.55,133.87 3241.86,133.86C3241.69,134.31 3242.08,134.71 3242.34,135.17C3242.91,136.18 3244.16,138.42 3244.69,139.14C3246.54,141.64 3251.13,141.18 3252.71,137.99C3253.92,135.54 3252.60,133.82 3251.46,131.77C3251.19,131.29 3250.95,130.88 3250.68,130.44C3250.48,130.09 3250.14,129.20 3249.70,129.39" fill="#830B1B" fill-rule="evenodd"/><path d="M3117.22,226.19C3113.40,226.56 3109.87,232.02 3115.08,235.77C3115.80,236.29 3117.14,236.94 3118.33,236.52C3119.71,236.02 3119.77,234.57 3119.24,233.86C3119.00,233.55 3118.53,233.07 3117.95,233.05C3117.51,233.03 3117.63,233.47 3116.91,234.04C3115.77,234.96 3114.48,234.16 3114.74,232.56C3114.94,231.39 3115.63,230.45 3116.19,229.79C3119.17,226.31 3121.94,229.36 3120.20,231.08C3119.94,231.33 3119.80,231.30 3119.53,231.47C3118.91,231.86 3119.65,233.70 3121.22,233.63C3122.83,233.56 3123.42,231.44 3122.39,229.43C3121.49,227.64 3119.56,225.96 3117.22,226.19" fill="#830B1B" fill-rule="evenodd"/><path d="M3159.59,92.13C3160.77,92.39 3160.86,92.51 3161.25,94.22C3161.40,94.89 3161.93,96.78 3161.90,97.34C3161.43,97.31 3160.80,96.31 3160.06,95.71C3159.52,95.27 3158.86,94.49 3158.35,93.96C3156.37,91.92 3157.25,92.25 3154.44,92.90C3153.26,93.17 3153.93,93.40 3154.36,94.03C3154.62,94.40 3155.74,99.49 3155.88,100.21C3155.96,100.63 3156.00,101.13 3155.83,101.52C3155.59,102.06 3155.08,101.84 3155.24,102.42C3155.70,102.59 3156.60,102.26 3157.13,102.14C3157.56,102.04 3158.79,101.97 3158.50,101.43C3158.37,101.32 3158.54,101.41 3158.34,101.35C3158.10,101.28 3157.74,101.38 3157.31,100.65C3157.08,100.26 3156.96,99.64 3156.85,99.15C3156.65,98.28 3156.19,96.73 3156.16,95.89C3156.68,95.97 3159.16,98.83 3159.55,99.24L3160.41,100.04C3160.70,100.33 3160.92,100.60 3161.21,100.89C3161.58,101.26 3161.88,101.05 3162.45,100.91C3164.23,100.48 3164.06,101.11 3163.16,97.22C3162.91,96.15 3161.96,92.85 3162.27,92.07C3162.40,91.74 3163.52,91.01 3162.59,91.03L3160.05,91.59C3159.67,91.68 3159.55,91.73 3159.59,92.13" fill="#830B1B" fill-rule="evenodd"/><path d="M3210.37,96.40C3210.15,97.03 3211.06,96.93 3210.71,98.17C3210.56,98.72 3210.24,99.30 3210.00,99.80C3209.17,101.54 3207.98,103.22 3208.63,105.14C3209.43,107.49 3213.16,109.06 3215.30,106.98C3216.36,105.95 3217.47,102.50 3218.36,101.53C3218.89,100.96 3219.39,101.39 3219.64,101.07C3219.97,100.72 3218.69,100.28 3218.38,100.14C3218.11,100.01 3217.85,99.88 3217.58,99.74C3217.49,99.70 3216.43,99.11 3216.62,99.79C3216.63,99.84 3216.74,99.97 3216.78,100.01C3217.26,100.57 3217.03,101.17 3216.74,101.87C3216.45,102.56 3216.05,103.30 3215.71,104.00C3215.08,105.32 3214.23,107.34 3212.22,106.53C3211.52,106.25 3210.94,105.62 3210.97,104.57C3211.00,103.73 3211.49,102.87 3211.81,102.21C3212.15,101.48 3212.51,100.81 3212.84,100.08C3213.56,98.48 3214.04,98.92 3214.77,98.77C3214.84,98.29 3214.67,98.31 3213.93,97.96C3213.52,97.77 3213.16,97.61 3212.75,97.41C3212.33,97.20 3210.70,96.29 3210.37,96.40" fill="#830B1B" fill-rule="evenodd"/><path d="M3103.18,132.78L3102.88,132.76C3102.69,132.84 3102.47,133.33 3102.32,133.58C3102.10,133.95 3101.89,134.35 3101.69,134.68C3101.48,135.02 3100.34,136.69 3100.60,136.94C3100.99,137.32 3101.20,136.14 3102.62,136.89C3104.46,137.86 3106.37,139.50 3108.19,139.50C3110.86,139.49 3112.84,136.26 3112.03,133.95C3111.26,131.77 3108.05,131.06 3106.51,129.61C3106.22,129.34 3105.97,129.11 3106.00,128.53C3106.04,127.56 3105.57,128.08 3105.34,128.47L3104.10,130.56C3103.72,131.48 3104.83,130.74 3104.83,130.74C3105.25,130.55 3105.77,130.72 3106.14,130.88C3106.81,131.18 3109.65,132.89 3110.20,133.37C3111.65,134.63 3110.86,137.18 3108.87,137.03C3107.70,136.95 3105.65,135.53 3104.44,134.84C3104.07,134.62 3103.71,134.41 3103.49,134.13C3103.03,133.57 3103.39,133.24 3103.18,132.78" fill="#830B1B" fill-rule="evenodd"/><path d="M3231.54,230.45C3231.65,230.67 3231.59,230.58 3231.80,230.72C3232.52,230.53 3232.44,230.00 3234.07,231.27C3234.91,231.94 3236.57,233.61 3237.64,234.48C3239.07,235.67 3238.06,236.27 3238.44,236.75C3238.89,236.77 3238.93,236.46 3239.20,236.19L3241.80,233.29C3242.03,233.00 3242.23,232.82 3242.47,232.53L3243.78,231.08C3243.71,230.59 3243.29,230.29 3242.98,229.97C3242.66,229.63 3242.48,229.02 3241.94,229.14C3241.73,229.74 3242.68,230.49 3241.86,231.62C3241.66,231.90 3241.36,232.27 3241.15,232.49C3240.99,232.64 3240.91,232.69 3240.76,232.86C3240.17,233.53 3240.32,233.17 3239.14,232.22C3238.94,232.06 3238.14,231.33 3238.07,231.13C3238.22,230.80 3238.50,230.60 3238.91,230.40C3239.63,230.06 3239.79,230.57 3240.16,230.38C3240.50,229.92 3239.50,229.40 3239.19,229.08C3238.94,228.82 3238.16,228.05 3237.83,228.05C3237.44,228.57 3238.03,228.53 3237.89,229.30C3237.82,229.69 3237.41,230.25 3237.23,230.35C3236.96,230.41 3234.86,228.45 3234.87,228.26C3234.96,228.03 3235.36,227.62 3235.52,227.46C3235.82,227.18 3235.96,226.90 3236.26,226.70C3237.48,225.86 3237.99,226.67 3238.61,226.50C3238.71,225.96 3238.21,225.79 3237.83,225.55C3236.13,224.48 3237.07,224.36 3234.92,226.56L3232.37,229.44C3232.14,229.72 3231.65,230.11 3231.54,230.45" fill="#830B1B" fill-rule="evenodd"/><path d="M3226.49,112.80C3226.06,112.77 3225.55,112.25 3225.22,111.99C3224.58,111.48 3224.35,111.64 3225.21,111.01C3225.66,110.69 3227.21,109.47 3227.67,109.46C3227.61,109.95 3226.70,112.32 3226.49,112.80M3220.13,111.76L3219.92,112.02C3220.14,112.37 3221.49,113.32 3222.02,113.75C3222.28,113.96 3222.47,114.19 3222.86,114.08C3222.97,113.65 3222.26,113.05 3223.26,112.38C3223.75,112.06 3224.10,112.44 3224.88,113.07C3225.30,113.41 3226.17,113.76 3225.91,114.43C3225.42,115.69 3224.80,114.84 3224.36,115.35C3224.46,115.76 3227.26,117.74 3227.83,118.19C3228.05,118.36 3228.13,118.49 3228.46,118.41C3228.78,117.76 3227.72,117.97 3228.29,115.83C3228.50,115.00 3228.83,114.13 3229.10,113.32C3229.34,112.62 3230.71,108.74 3230.66,108.26C3230.42,108.04 3228.98,106.89 3228.67,106.87C3227.87,107.79 3229.29,106.86 3226.91,108.50C3225.93,109.18 3222.38,111.52 3221.62,111.79C3220.83,112.08 3220.70,111.76 3220.13,111.76" fill="#830B1B" fill-rule="evenodd"/><path d="M3142.46,103.60C3142.37,102.77 3142.09,101.21 3142.14,100.47C3142.46,100.54 3142.41,100.58 3142.58,100.77L3144.09,102.42C3144.24,102.59 3144.52,102.90 3144.59,103.14C3144.38,103.42 3143.83,103.57 3143.45,103.75C3142.93,104.01 3142.55,104.35 3142.46,103.60M3140.44,98.32C3140.51,98.79 3140.80,98.63 3140.90,99.29L3141.27,103.44C3141.37,104.54 3141.70,106.51 3141.26,107.44C3141.08,107.83 3140.70,108.00 3140.69,108.31C3140.94,108.58 3141.16,108.42 3141.54,108.25C3141.87,108.10 3142.11,108.00 3142.42,107.85C3143.50,107.35 3144.08,107.34 3143.96,106.77C3143.51,106.57 3143.42,106.86 3143.06,106.46C3142.90,106.26 3142.71,105.87 3142.72,105.55C3142.73,105.02 3143.72,104.79 3144.18,104.56C3144.84,104.24 3145.41,103.78 3145.82,104.38C3146.64,105.58 3145.66,105.42 3145.81,106.12C3146.30,106.23 3148.80,104.98 3149.53,104.63C3149.78,104.51 3150.83,104.23 3150.35,103.83C3150.13,103.69 3149.55,103.88 3148.93,103.53C3148.63,103.36 3148.14,102.91 3147.94,102.71C3147.64,102.40 3147.39,102.06 3147.07,101.77C3146.03,100.80 3145.31,99.85 3144.45,99.05C3143.97,98.60 3142.87,97.37 3142.61,97.23C3142.08,97.42 3140.71,97.99 3140.44,98.32" fill="#830B1B" fill-rule="evenodd"/><path d="M3185.99,258.67C3185.51,258.82 3184.96,258.82 3184.45,258.88C3183.32,259.02 3183.93,258.47 3184.35,255.92C3184.46,255.25 3184.53,255.41 3184.70,255.35C3184.91,255.70 3186.04,258.32 3185.99,258.67M3183.61,252.68C3183.54,253.25 3183.88,253.25 3183.69,254.05C3183.38,255.31 3182.32,259.85 3182.05,260.62C3181.42,262.41 3180.55,261.65 3180.70,262.50C3180.96,262.55 3183.93,262.38 3184.24,262.07C3184.20,261.53 3183.73,261.79 3183.50,261.35C3183.30,260.95 3183.37,260.19 3183.66,260.04C3183.86,259.93 3186.13,259.75 3186.45,259.78C3186.73,259.99 3186.93,260.43 3186.86,260.96C3186.76,261.64 3186.01,261.36 3186.29,261.86C3186.46,262.05 3187.30,261.90 3187.52,261.88C3188.35,261.80 3190.80,261.62 3191.29,261.44L3191.31,261.07C3190.69,260.87 3190.59,260.94 3190.14,260.51C3189.52,259.93 3188.67,257.95 3188.31,257.14C3187.62,255.59 3186.83,253.90 3186.10,252.44C3185.62,252.40 3183.98,252.54 3183.61,252.68" fill="#830B1B" fill-rule="evenodd"/><path d="M3195.18,253.62C3195.66,253.33 3195.13,252.80 3195.98,251.96C3196.28,251.66 3197.24,251.19 3197.80,251.27C3197.98,251.56 3199.56,256.78 3199.69,257.51C3200.01,259.22 3198.84,258.87 3199.15,259.55C3199.17,259.56 3199.21,259.55 3199.22,259.57L3202.91,258.58C3203.24,258.49 3204.00,258.38 3203.77,257.99C3203.75,257.97 3203.73,257.93 3203.72,257.95C3203.71,257.97 3203.68,257.92 3203.66,257.92C3203.65,257.91 3203.62,257.89 3203.61,257.89C3203.37,257.80 3202.71,257.93 3202.28,256.73C3202.00,255.92 3200.41,250.66 3200.52,250.48C3200.67,250.30 3200.64,250.34 3200.92,250.26C3201.06,250.22 3201.25,250.16 3201.39,250.13C3202.18,249.95 3202.74,250.04 3203.31,250.57C3203.57,250.81 3203.65,251.11 3204.02,251.02C3204.23,250.62 3203.76,249.85 3203.57,249.41C3203.22,248.60 3203.33,248.43 3202.40,248.72L3195.48,250.78C3194.28,251.14 3194.42,250.69 3194.77,252.94C3194.83,253.36 3194.85,253.54 3195.18,253.62" fill="#830B1B" fill-rule="evenodd"/><path d="M3134.95,250.81L3134.78,251.08C3134.97,251.42 3136.45,252.12 3136.90,252.36L3138.89,253.39C3139.15,253.43 3139.06,253.42 3139.18,253.30C3139.38,252.86 3138.63,252.83 3138.83,251.82C3138.93,251.31 3139.26,250.79 3139.49,250.37C3139.96,249.47 3140.44,248.57 3140.92,247.66C3141.34,246.87 3141.93,245.47 3142.78,245.39C3143.11,245.36 3143.61,245.56 3143.50,245.09C3143.45,244.83 3141.77,244.06 3141.50,243.91C3141.03,243.66 3140.63,243.46 3140.17,243.21C3140.00,243.11 3139.62,242.88 3139.48,242.84C3139.09,242.74 3139.02,243.03 3139.18,243.29C3139.36,243.59 3139.79,243.80 3139.34,244.88L3136.41,250.31C3136.03,250.84 3135.71,250.79 3134.95,250.81" fill="#830B1B" fill-rule="evenodd"/><path d="M3169.89,90.33C3169.99,90.86 3170.35,90.59 3170.70,90.95C3171.32,91.57 3171.26,93.88 3171.32,94.86C3171.37,95.87 3171.74,98.26 3171.12,98.89C3170.75,99.27 3170.37,99.07 3170.47,99.63C3170.87,99.77 3175.03,99.54 3175.35,99.35L3175.39,99.06C3175.01,98.76 3174.36,98.91 3174.17,97.49L3173.84,92.15C3173.79,90.46 3174.56,90.52 3174.86,90.30L3174.81,89.93C3174.15,89.84 3173.00,89.98 3172.28,90.03C3171.62,90.07 3170.28,89.94 3169.89,90.33" fill="#830B1B" fill-rule="evenodd"/><path d="M3171.12,168.79C3170.63,168.76 3170.43,168.43 3169.79,168.74C3169.40,168.92 3169.06,169.24 3169.08,169.81C3169.11,170.38 3169.38,170.71 3169.90,170.78C3170.55,170.86 3170.68,170.32 3171.02,170.12C3171.28,170.88 3171.15,171.48 3170.57,171.79C3169.26,172.48 3168.07,171.83 3167.34,170.77C3166.61,169.70 3166.88,169.88 3166.49,169.20L3166.23,169.47C3165.96,169.92 3166.04,170.11 3166.28,170.62C3167.24,172.69 3170.37,174.43 3172.57,170.77C3173.19,169.73 3173.56,169.12 3175.26,169.16C3175.25,168.37 3174.99,168.01 3174.34,167.84C3173.49,167.62 3173.16,168.05 3172.66,168.30C3172.50,167.95 3172.33,167.60 3171.72,167.74C3171.23,167.85 3171.17,168.26 3171.12,168.79" fill="#830B1B" fill-rule="evenodd"/><path d="M3171.25,185.76C3171.07,186.07 3170.66,186.32 3170.97,186.88C3171.19,187.30 3171.57,187.29 3172.15,187.21C3172.14,187.79 3172.15,188.21 3172.46,188.55C3173.26,189.47 3174.53,188.74 3174.39,187.83C3174.30,187.30 3173.86,187.23 3173.46,186.98C3173.66,186.71 3173.97,186.60 3174.33,186.60C3175.52,186.59 3176.59,188.60 3175.02,190.39C3174.57,190.91 3173.86,191.47 3173.78,191.67C3174.67,191.80 3174.63,191.83 3175.24,191.36C3176.28,190.57 3177.14,188.31 3176.16,186.81C3175.63,185.98 3174.72,185.61 3173.50,185.25C3171.47,184.64 3171.61,183.64 3171.39,183.15C3170.01,183.28 3170.10,185.10 3171.25,185.76" fill="#830B1B" fill-rule="evenodd"/><path d="M3183.90,177.72C3184.60,178.99 3185.79,178.39 3186.12,177.99C3186.29,177.80 3186.40,177.42 3186.55,177.23C3186.90,177.38 3187.20,177.64 3187.67,177.28C3188.09,176.96 3187.85,176.49 3187.71,176.06C3188.22,175.79 3188.56,175.95 3188.88,175.48C3189.87,174.04 3187.90,172.99 3187.35,174.17C3187.24,174.40 3187.28,174.49 3187.20,174.69C3187.13,174.89 3187.24,174.72 3187.11,174.86C3186.76,174.51 3186.27,173.88 3186.76,173.13C3186.98,172.81 3187.68,172.25 3188.19,172.14C3189.73,171.83 3191.23,173.31 3191.63,173.47C3191.75,172.60 3191.51,172.47 3191.02,172.10C3189.75,171.14 3187.70,171.06 3186.49,172.10C3184.95,173.42 3186.11,176.17 3184.57,177.35C3184.36,177.51 3184.10,177.55 3183.90,177.72" fill="#830B1B" fill-rule="evenodd"/><path d="M3178.71,176.51C3178.83,175.63 3178.48,175.71 3177.66,175.78C3177.07,175.83 3176.50,175.89 3175.91,175.90C3174.99,175.92 3175.04,176.00 3175.03,176.89C3174.99,179.45 3174.48,179.55 3176.06,179.52C3178.63,179.46 3178.38,179.79 3178.56,178.26C3178.63,177.69 3178.63,177.09 3178.71,176.51" fill="#830B1B" fill-rule="evenodd"/><path d="M3176.83,84.89C3202.04,84.89 3224.88,95.12 3241.40,111.65C3257.93,128.18 3268.15,151.01 3268.15,176.23C3268.15,201.46 3257.93,224.29 3241.40,240.82C3224.88,257.35 3202.04,267.57 3176.83,267.57C3151.61,267.57 3128.78,257.35 3112.25,240.82C3095.72,224.29 3085.50,201.46 3085.50,176.23C3085.50,151.01 3095.72,128.18 3112.25,111.65C3128.78,95.12 3151.61,84.89 3176.83,84.89M3241.00,112.05C3224.58,95.62 3201.89,85.46 3176.83,85.46C3151.76,85.46 3129.07,95.62 3112.65,112.05C3096.23,128.47 3086.07,151.17 3086.07,176.23C3086.07,201.30 3096.23,223.99 3112.65,240.42C3129.07,256.85 3151.76,267.01 3176.83,267.01C3201.89,267.01 3224.58,256.85 3241.00,240.42C3257.42,223.99 3267.58,201.30 3267.58,176.23C3267.58,151.17 3257.42,128.47 3241.00,112.05" fill="#1A1A18" fill-rule="nonzero"/></svg>
+        <div class="head-text">
+          <div class="eyebrow">Route master plan · Erode</div>
+          <h1 class="title">ERODE ROUTE PLAN</h1>
+          <p class="sub">3D Route Layout</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="tools panel" role="toolbar" aria-label="Map view tools">
+      <div class="seg" role="group" aria-label="Map look"><button type="button" id="mPlan" aria-pressed="true">3D Plan</button><button type="button" id="mSat" aria-pressed="false">Satellite</button></div>
+      <div class="seg" role="group" aria-label="View"><button type="button" id="v2d" aria-pressed="false">2D</button><button type="button" id="v3d" aria-pressed="true">3D</button></div>
+      <span class="sep" aria-hidden="true"></span>
+      <button type="button" class="chip" id="tLabels" aria-pressed="true"><span class="sq"></span>Labels</button>
+      <button type="button" class="chip" id="tBuild" aria-pressed="true"><span class="sq"></span>Buildings</button>
+      <button type="button" class="chip" id="tRoute" aria-pressed="true"><span class="sq"></span>Route</button>
+      <button type="button" class="chip" id="tLand" aria-pressed="true"><span class="sq"></span>Trees</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button type="button" class="ib" id="locate" title="Show my location" aria-label="Show my location"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8"/></svg></button>
+      <button type="button" class="ib" id="rotL" title="Rotate left" aria-label="Rotate map left"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg></button>
+      <button type="button" class="ib" id="rotR" title="Rotate right" aria-label="Rotate map right"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v4.5h-4.5"/></svg></button>
+      <button type="button" class="ib" id="reset" title="Whole route" aria-label="Show the whole route"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5"/></svg></button>
+      <button type="button" class="ib" id="fs" title="Full screen" aria-label="Enter full screen"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+
+    <aside class="dock panel" id="dock" aria-label="Stops and details">
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab" role="tab" id="tab-stops" aria-selected="true" aria-controls="pane-stops">Stops</button>
+        <button type="button" class="tab" role="tab" id="tab-sel" aria-selected="false" aria-controls="pane-sel">Selected</button>
+        <button type="button" class="tab" role="tab" id="tab-info" aria-selected="false" aria-controls="pane-info">Info</button>
+        <button type="button" class="sheet-toggle" id="sheetToggle" aria-label="Collapse panel" aria-expanded="true"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>
+      </div>
+      <section class="pane" id="pane-stops" role="tabpanel" aria-labelledby="tab-stops">
+        <div class="stats"><div><b id="sStops">9</b>stops</div><div><b id="sDist">19.4 km</b>by road</div><div><b id="sTime">28 min</b>by car</div></div>
+        <div class="acts">
+          <a class="btn go" href="https://maps.app.goo.gl/qey6fZK5ZBaxcxst5" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg>Start in Google Maps</a>
+          <button type="button" class="btn" id="flyBtn"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg>Fly the route</button>
+        </div>
+        <p class="hint">Start at Sri Thindal Cafe, then the stops in the order of the shared Google Maps link. Tap one to go there in 3D.</p>
+        <ol class="stops" id="stops"></ol>
+        <div class="sec">
+          <h3>On the plan</h3>
+          <div class="keys">
+            <div class="key"><i class="k-route"></i>Route, along the roads</div>
+            <div class="key"><i class="k-start"></i>Start point, where you join the route</div>
+            <div class="key"><i class="k-stop"></i>Stop building, coloured block</div>
+            <div class="key"><i class="k-wp"></i>Waypoint, a point on the route</div>
+            <div class="key"><i class="k-road"></i>Road with kerb</div>
+            <div class="key"><i class="k-bld"></i>Building, drawn from the street layout</div>
+            <div class="key"><i class="k-osm"></i>Building mapped in OpenStreetMap</div>
+            <div class="key"><i class="k-green"></i>Park or open ground</div>
+            <div class="key"><i class="k-water"></i>Water</div>
+            <div class="key"><i class="k-grid"></i>Grid square, 1 km</div>
+          </div>
+        </div>
+      </section>
+      <section class="pane" id="pane-sel" role="tabpanel" aria-labelledby="tab-sel" hidden>
+        <p class="empty" id="selEmpty">Tap a stop on the map or in the list to see it here, with directions in Google Maps.</p>
+        <div id="det" hidden></div>
+      </section>
+      <section class="pane" id="pane-info" role="tabpanel" aria-labelledby="tab-info" hidden>
+        <div class="tb">
+          <div class="wide"><small>Drawing</small><b>Erode Route Plan · 3D Route Layout</b></div>
+          <div><small>Points</small><b>Start + 9 stops</b></div>
+          <div><small>Route</small><b id="infoRoute">19.4 km by road</b></div>
+          <div><small>Grid</small><b>1 km squares, A–H · 1–8</b></div>
+          <div><small>North</small><b>Up</b></div>
+          <div class="wide"><small>Sources</small><b>Points and order: the shared Google Maps link · Roads, water, parks, rail and mapped buildings: OpenStreetMap · Route line: OSRM over OpenStreetMap roads · Satellite photos: Esri</b></div>
+        </div>
+        <ul class="notes">
+          <li>Every point is at the exact place given in the shared Google Maps link, in the same order. Sri Thindal Cafe is the start point that guides people onto the route; the stops begin at Burhani Palace.</li>
+          <li>Roads, junctions and distances are to scale. The route follows OpenStreetMap roads; Google Maps may choose slightly different roads, so follow Google Maps while driving.</li>
+          <li>Each coloured block marks the stop's building, placed on its point and kept clear of the road. Its size and height show the stop, not the real building.</li>
+          <li>Few Erode buildings are mapped online. The white blocks along the route are drawn from the street layout to show the built-up area; their exact shapes and heights are not known. Blue-grey blocks are buildings mapped in OpenStreetMap.</li>
+          <li>Trees on the board edge are decoration. Street trees are illustrative.</li>
+          <li>Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> (ODbL). Satellite imagery © Esri, Maxar, Earthstar Geographics. Labels in satellite view: OpenFreeMap.</li>
+        </ul>
+      </section>
+    </aside>
+
+    <div class="nav">
+      <div class="helpcol">
+        <p class="help" id="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</p>
+        <p class="help" id="help">Drag to move. Right-drag or two fingers to rotate and tilt. Scroll or pinch to zoom.</p>
+      </div>
+      <div class="zoom panel">
+        <button type="button" id="zIn" aria-label="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button type="button" id="zOut" aria-label="Zoom out"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+      </div>
+      <button type="button" class="compass panel" id="compass" title="Face north" aria-label="Turn the map so north points up">
+        <svg viewBox="-40 -40 80 80" aria-hidden="true">
+          <circle class="ring" r="36"/>
+          <g id="needle">
+            <path class="tick" d="M0-36v5M0 31v5M-36 0h5M31 0h5"/>
+            <path class="n-dark" d="M0-24 L5 0 L0 0Z"/><path class="n-light" d="M0-24 L-5 0 L0 0Z"/>
+            <path class="n-light" d="M0 24 L5 0 L0 0Z"/><path class="n-dark" d="M0 24 L-5 0 L0 0Z"/>
+            <path class="n-dark" d="M24 0 L0 4 L0 0Z"/><path class="n-light" d="M24 0 L0 -4 L0 0Z"/>
+            <path class="n-light" d="M-24 0 L0 4 L0 0Z"/><path class="n-dark" d="M-24 0 L0 -4 L0 0Z"/>
+            <text y="-31">N</text><text class="minor" x="30">E</text><text class="minor" y="31">S</text><text class="minor" x="-30">W</text>
+          </g>
+        </svg>
+      </button>
     </div>
   </div>
-  <div class="c-body" id="cbody">
-    <ol class="stops" id="stops"></ol>
-    <p class="note">Sri Thindal Cafe is the start point that guides you onto the route; the stops begin at Burhani Palace. Tap any point to see it in 3D. "Navigate" opens Google Maps with directions from where you are. The blue line follows the roads on OpenStreetMap through the same points as the shared Google Maps route.</p>
-  </div>
-</aside>
 
-<div class="views panel" role="toolbar" aria-label="Map view">
-  <div class="seg" role="group" aria-label="Map type"><button type="button" id="vSat" aria-pressed="true">Satellite</button><button type="button" id="vMap" aria-pressed="false">Map</button></div>
-  <div class="seg" role="group" aria-label="Tilt"><button type="button" id="v3d" aria-pressed="true">3D</button><button type="button" id="v2d" aria-pressed="false">2D</button></div>
+  <div class="tour panel" id="tour" hidden><span class="tt" id="tourT">Flying the route</span><span class="bar"><i id="tourBar"></i></span><button type="button" class="btn" id="tourStop">Stop</button></div>
+  <div class="toast panel" id="toast" hidden></div>
 </div>
-
-<div class="tour panel" id="tour" hidden><span class="tt" id="tourT">Flying the route</span><span class="bar"><i id="tourBar"></i></span><button type="button" class="btn sm" id="tourStop">Stop</button></div>
-<div class="toast panel" id="toast" hidden></div>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-(function () {
+(async function () {
 "use strict";
-const STOPS = [{"n": 1, "name": "Sri Thindal Cafe (STC)", "sub": "Thindal ORR Corner, Perundurai Road", "lat": 11.3133847, "lon": 77.6667955, "kind": "guide", "leg_m": 0, "cum_m": 0, "no": 0}, {"n": 2, "name": "Burhani Palace", "sub": "Chettipalayam", "lat": 11.3099715, "lon": 77.7217911, "kind": "place", "leg_m": 8995, "cum_m": 8995, "no": 1}, {"n": 3, "name": "Waypoint", "sub": "11.348424, 77.729225", "lat": 11.348424, "lon": 77.729225, "kind": "coord", "leg_m": 5580, "cum_m": 14575, "no": 2}, {"n": 4, "name": "Saif Tools & Machinery Stores", "sub": "163, Sathy Road", "lat": 11.3463393, "lon": 77.7236701, "kind": "place", "leg_m": 1158, "cum_m": 15733, "no": 3}, {"n": 5, "name": "Dawoodi Bohra Masjid", "sub": "Vairapalayam", "lat": 11.3570547, "lon": 77.7196622, "kind": "place", "leg_m": 1885, "cum_m": 17618, "no": 4}, {"n": 6, "name": "Waypoint", "sub": "11.360531, 77.718561", "lat": 11.360531, "lon": 77.718561, "kind": "coord", "leg_m": 602, "cum_m": 18220, "no": 5}, {"n": 7, "name": "Mufaddal Beehive", "sub": "159A, Priyamariyamman Kovil St, Vairapalayam", "lat": 11.360365, "lon": 77.7188693, "kind": "place", "leg_m": 32, "cum_m": 18253, "no": 6}, {"n": 8, "name": "Waypoint", "sub": "11.3552248, 77.7219404", "lat": 11.3552248, "lon": 77.7219404, "kind": "coord", "leg_m": 989, "cum_m": 19242, "no": 7}, {"n": 9, "name": "2, 8th C Street", "sub": "Thirunagar Colony, Pavalatham Palayam", "lat": 11.3546974, "lon": 77.7222362, "kind": "place", "leg_m": 103, "cum_m": 19345, "no": 8}, {"n": 10, "name": "End point", "sub": "11.3545182, 77.7227244", "lat": 11.3545182, "lon": 77.7227244, "kind": "coord", "leg_m": 64, "cum_m": 19408, "note": "Google Maps names this point Samraj Textiles Pvt Ltd.", "no": 9}];
-const ROUTE = [[77.666949,11.313474],[77.666921,11.313521],[77.666873,11.313578],[77.666811,11.313628],[77.666739,11.313663],[77.666461,11.313642],[77.666232,11.313606],[77.666083,11.313562],[77.665986,11.313524],[77.665906,11.31348],[77.665792,11.313395],[77.665722,11.31332],[77.665634,11.313212],[77.665579,11.313128],[77.665417,11.312887],[77.665324,11.312722],[77.66515,11.312473],[77.664913,11.312257],[77.664858,11.312194],[77.664293,11.311677],[77.664307,11.311794],[77.664877,11.312285],[77.66511,11.312549],[77.665204,11.312688],[77.665334,11.312891],[77.665493,11.313134],[77.665683,11.313394],[77.665754,11.313464],[77.665848,11.313543],[77.665954,11.313601],[77.666068,11.313644],[77.666186,11.313675],[77.66691,11.313841],[77.66694,11.313867],[77.666978,11.313881],[77.667018,11.313882],[77.667056,11.313869],[77.667087,11.313845],[77.667109,11.313811],[77.667117,11.313773],[77.667112,11.313737],[77.667096,11.313704],[77.66707,11.313677],[77.667076,11.313363],[77.667073,11.313095],[77.66705,11.313036],[77.667101,11.312442],[77.667116,11.312399],[77.667216,11.312099],[77.667292,11.311945],[77.667409,11.311709],[77.667602,11.311448],[77.667878,11.311178],[77.668194,11.31088],[77.668532,11.310607],[77.668771,11.310411],[77.66913,11.310198],[77.669894,11.309872],[77.670536,11.309591],[77.671638,11.309133],[77.671777,11.309084],[77.671958,11.30902],[77.672042,11.30899],[77.673064,11.308629],[77.675427,11.307594],[77.675998,11.307344],[77.679053,11.30613],[77.681898,11.304807],[77.683171,11.304184],[77.683296,11.304093],[77.68351,11.303956],[77.685345,11.3027],[77.685625,11.302515],[77.687611,11.301181],[77.68772,11.301088],[77.687858,11.300969],[77.689221,11.300054],[77.689907,11.299637],[77.690163,11.299497],[77.690382,11.299405],[77.690608,11.299352],[77.690865,11.299338],[77.691922,11.299293],[77.692382,11.299303],[77.692832,11.299351],[77.69406,11.299583],[77.695403,11.299821],[77.696306,11.299908],[77.696682,11.299969],[77.696744,11.299975],[77.698372,11.300128],[77.698883,11.300164],[77.699989,11.300243],[77.701059,11.300236],[77.701244,11.300189],[77.701741,11.300065],[77.702017,11.299978],[77.702491,11.299852],[77.702945,11.299776],[77.703912,11.299742],[77.704537,11.29972],[77.705278,11.299671],[77.705759,11.29962],[77.70744,11.29944],[77.708533,11.299328],[77.709182,11.299258],[77.709346,11.299236],[77.709836,11.299171],[77.710144,11.299094],[77.710888,11.29881],[77.711364,11.298569],[77.711772,11.298362],[77.712176,11.298136],[77.712458,11.297955],[77.712822,11.297672],[77.713043,11.29792],[77.713331,11.29825],[77.713464,11.29843],[77.713733,11.298804],[77.713804,11.29891],[77.713949,11.299133],[77.714048,11.299329],[77.71413,11.299527],[77.714172,11.299671],[77.714188,11.299752],[77.714235,11.299959],[77.714265,11.300018],[77.714447,11.30025],[77.714662,11.300503],[77.714861,11.300649],[77.715053,11.300724],[77.715273,11.300783],[77.715499,11.300844],[77.715658,11.300922],[77.715722,11.30099],[77.715759,11.301027],[77.715829,11.301198],[77.715888,11.301494],[77.715935,11.301677],[77.716347,11.301693],[77.716447,11.301703],[77.71664,11.301722],[77.716795,11.301749],[77.716904,11.301768],[77.717124,11.301851],[77.717305,11.301956],[77.717395,11.301974],[77.717704,11.301937],[77.718004,11.301896],[77.718292,11.301883],[77.718433,11.301876],[77.71868,11.301837],[77.718849,11.301863],[77.719122,11.301932],[77.719393,11.301953],[77.719534,11.301984],[77.719645,11.302079],[77.719705,11.302203],[77.719817,11.302646],[77.71986,11.302802],[77.719903,11.302954],[77.719982,11.303309],[77.719992,11.303489],[77.720039,11.3037],[77.720092,11.303784],[77.720132,11.303792],[77.720051,11.303826],[77.720003,11.303848],[77.719942,11.303855],[77.719439,11.303922],[77.719414,11.303937],[77.719392,11.303958],[77.719427,11.304343],[77.719394,11.304391],[77.719372,11.304409],[77.719362,11.304448],[77.719365,11.304617],[77.719409,11.30511],[77.719385,11.305229],[77.719358,11.305359],[77.719342,11.305421],[77.719636,11.306557],[77.719988,11.306474],[77.720109,11.307254],[77.720143,11.307474],[77.720462,11.307468],[77.7207,11.307463],[77.720867,11.307464],[77.721651,11.307468],[77.722426,11.307679],[77.72222,11.307837],[77.722102,11.307933],[77.721962,11.308047],[77.721898,11.308163],[77.721783,11.308372],[77.721548,11.30886],[77.721416,11.309268],[77.721379,11.309636],[77.721363,11.309798],[77.721327,11.310059],[77.721281,11.310338],[77.721335,11.310519],[77.721348,11.310602],[77.721676,11.310575],[77.721699,11.309506],[77.721689,11.30997],[77.721676,11.310575],[77.721668,11.311006],[77.722022,11.312763],[77.72228,11.312739],[77.722612,11.312707],[77.722826,11.312683],[77.723109,11.312707],[77.723287,11.312735],[77.723849,11.312889],[77.724034,11.312928],[77.724439,11.313096],[77.724593,11.313206],[77.724784,11.313307],[77.725181,11.313544],[77.725245,11.313582],[77.725484,11.313728],[77.725541,11.313782],[77.725633,11.313868],[77.725767,11.314053],[77.725907,11.314247],[77.726448,11.314211],[77.726544,11.314577],[77.726661,11.315043],[77.726673,11.315091],[77.726791,11.315546],[77.726818,11.315683],[77.726848,11.315937],[77.726891,11.316512],[77.726904,11.316679],[77.72691,11.316806],[77.726927,11.317112],[77.726929,11.317144],[77.72699,11.317653],[77.72702,11.317856],[77.727094,11.318217],[77.727162,11.318545],[77.727175,11.318618],[77.727268,11.319044],[77.72729,11.319186],[77.727305,11.319256],[77.727357,11.319628],[77.727393,11.319861],[77.727395,11.319954],[77.727402,11.32023],[77.727377,11.320502],[77.727365,11.321063],[77.727363,11.321285],[77.727362,11.321667],[77.727335,11.322241],[77.72732,11.322525],[77.727319,11.322644],[77.727306,11.322777],[77.727227,11.323714],[77.727182,11.323939],[77.727149,11.324127],[77.727174,11.324225],[77.727271,11.324382],[77.727413,11.324514],[77.727797,11.324794],[77.728132,11.325054],[77.728384,11.325258],[77.728895,11.325599],[77.729381,11.325933],[77.729511,11.326045],[77.729684,11.326176],[77.730099,11.326492],[77.730435,11.326746],[77.730506,11.326818],[77.730559,11.326898],[77.730585,11.326969],[77.730584,11.327006],[77.730575,11.327088],[77.730372,11.327499],[77.73016,11.327891],[77.730135,11.327943],[77.72995,11.328304],[77.7297,11.328863],[77.729382,11.329512],[77.729129,11.329966],[77.728937,11.330348],[77.728809,11.330607],[77.728768,11.330651],[77.728681,11.330724],[77.728454,11.330758],[77.728227,11.330785],[77.727439,11.330877],[77.727421,11.330863],[77.7274,11.330855],[77.727378,11.330855],[77.727356,11.330861],[77.727343,11.33087],[77.727304,11.330894],[77.727303,11.330943],[77.727343,11.330973],[77.727363,11.330984],[77.727358,11.331207],[77.727362,11.33133],[77.727403,11.331444],[77.727441,11.331751],[77.727492,11.332338],[77.727531,11.33285],[77.727547,11.333651],[77.727542,11.333718],[77.727427,11.334419],[77.72739,11.334612],[77.727291,11.334943],[77.727087,11.335797],[77.726895,11.336428],[77.726654,11.337356],[77.726387,11.338549],[77.726316,11.339239],[77.726833,11.33968],[77.727204,11.340116],[77.72739,11.340336],[77.727452,11.340449],[77.727854,11.341186],[77.728125,11.34171],[77.728208,11.341812],[77.728312,11.342042],[77.728438,11.342288],[77.728806,11.342825],[77.728916,11.342985],[77.729056,11.343189],[77.729284,11.343455],[77.729656,11.343887],[77.729708,11.343977],[77.73012,11.344695],[77.730172,11.344795],[77.730215,11.344878],[77.730226,11.34495],[77.730238,11.345019],[77.730336,11.345324],[77.730375,11.345409],[77.730592,11.345987],[77.730704,11.346244],[77.730964,11.346853],[77.731199,11.347266],[77.731343,11.347535],[77.731622,11.348026],[77.731705,11.348173],[77.731746,11.348233],[77.731829,11.348352],[77.731927,11.348515],[77.731864,11.348545],[77.731532,11.34866],[77.731231,11.348745],[77.730952,11.348818],[77.730748,11.348871],[77.730426,11.348923],[77.730072,11.348997],[77.729826,11.34905],[77.729611,11.349071],[77.729439,11.349071],[77.729429,11.34885],[77.729397,11.34865],[77.729379,11.348535],[77.729231,11.348542],[77.729181,11.348545],[77.728824,11.348565],[77.728527,11.348583],[77.728516,11.348118],[77.728431,11.348124],[77.728115,11.348134],[77.728115,11.347355],[77.72717,11.347291],[77.72709,11.347285],[77.726722,11.347189],[77.726288,11.347097],[77.725834,11.346841],[77.725909,11.346725],[77.725967,11.346632],[77.72602,11.346548],[77.726374,11.345961],[77.726572,11.345642],[77.726732,11.345427],[77.726745,11.345368],[77.726999,11.344964],[77.726889,11.344936],[77.726774,11.344974],[77.726518,11.345091],[77.726443,11.345129],[77.72619,11.345256],[77.725844,11.345419],[77.725303,11.345632],[77.724949,11.345787],[77.724599,11.34593],[77.723921,11.346243],[77.723786,11.346304],[77.723676,11.346352],[77.723178,11.346566],[77.722525,11.346844],[77.721734,11.347148],[77.721362,11.34727],[77.721383,11.347343],[77.721882,11.348853],[77.721942,11.34904],[77.721968,11.349121],[77.722218,11.349897],[77.722254,11.350006],[77.722479,11.350655],[77.722498,11.350715],[77.72255,11.35076],[77.722473,11.350843],[77.722093,11.351222],[77.721573,11.351662],[77.720944,11.352114],[77.720855,11.352183],[77.720221,11.352628],[77.719612,11.353035],[77.719478,11.353133],[77.71887,11.353676],[77.718804,11.353751],[77.718767,11.353828],[77.718553,11.354113],[77.71848,11.354216],[77.718375,11.354351],[77.718303,11.354458],[77.71821,11.354601],[77.718094,11.354775],[77.717796,11.355237],[77.717492,11.35578],[77.717409,11.355935],[77.717385,11.355984],[77.717211,11.35634],[77.717135,11.356495],[77.717288,11.356531],[77.717373,11.356544],[77.717604,11.356553],[77.718352,11.356583],[77.718453,11.356586],[77.718534,11.356617],[77.718566,11.356674],[77.718579,11.356808],[77.718626,11.357102],[77.719656,11.356998],[77.719769,11.356987],[77.719873,11.356999],[77.719987,11.357022],[77.720164,11.357096],[77.720148,11.357139],[77.72015,11.357211],[77.720153,11.35734],[77.720165,11.357759],[77.720181,11.358276],[77.720053,11.358293],[77.719868,11.358407],[77.719749,11.358492],[77.719074,11.358971],[77.718948,11.359044],[77.719108,11.359285],[77.719301,11.359579],[77.719451,11.359821],[77.719622,11.36],[77.718846,11.36041],[77.718626,11.360536],[77.718626,11.360536],[77.718846,11.36041],[77.718883,11.36039],[77.719622,11.36],[77.719451,11.359821],[77.719301,11.359579],[77.719108,11.359285],[77.718948,11.359044],[77.719074,11.358971],[77.719749,11.358492],[77.719868,11.358407],[77.720053,11.358293],[77.720181,11.358276],[77.72047,11.358261],[77.721576,11.358176],[77.721622,11.358172],[77.721695,11.358141],[77.722547,11.357782],[77.722032,11.356671],[77.721934,11.356463],[77.721542,11.35563],[77.721465,11.355467],[77.721954,11.355257],[77.722198,11.355152],[77.722444,11.355047],[77.72228,11.354678],[77.722263,11.354641],[77.722245,11.354617],[77.722249,11.354584],[77.722426,11.354565],[77.722523,11.354548],[77.722598,11.354545],[77.722723,11.35455]];            // [[lon, lat], ...] along the roads, start to end
-const ROUTE_M = 19408, ROUTE_S = 1677;
-const GMAPS_ROUTE = "https://maps.app.goo.gl/qey6fZK5ZBaxcxst5";
 const $ = id => document.getElementById(id);
 const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const km = m => m >= 1000 ? (m / 1000).toFixed(1) + " km" : Math.round(m) + " m";
-const isPhone = () => matchMedia("(max-width:720px)").matches;
+const isPhone = () => matchMedia("(max-width:720px), (max-width:1180px) and (orientation:portrait) and (min-height:900px)").matches;
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const title = s => s.kind === "place" || s.kind === "guide" ? s.name : (s.n === STOPS.length ? "End point" : "Waypoint");
 const FLAG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22V3h12l-2.6 4.5L18 12H8v10z"/></svg>';
-const NSTOPS = STOPS.filter(s => s.kind !== "guide").length;
-const GUIDE = STOPS.find(s => s.kind === "guide");
+const GMAPS = "https://maps.app.goo.gl/qey6fZK5ZBaxcxst5";
+function toast(t, ms) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => el.hidden = true, ms || 2800); }
+
+let D;
+try { D = await (await fetch("plan.json")).json(); }
+catch (e) { $("loading").textContent = "The plan couldn't load. Check the internet connection and reload."; return; }
+const STOPS = D.stops, ROUTE = D.route;
+const NST = STOPS.filter(s => s.kind !== "guide").length;
+const title = s => s.kind === "place" || s.kind === "guide" ? s.name : (s.n === STOPS.length ? "End point" : "Waypoint");
 const label = s => s.kind === "guide" ? "Start" : "Stop " + s.no;
 const prevName = i => i <= 0 ? "" : (STOPS[i - 1].kind === "guide" ? "the start point" : "stop " + STOPS[i - 1].no);
 const navUrl = s => `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=driving`;
+$("sStops").textContent = NST; $("sDist").textContent = (D.route_m / 1000).toFixed(1) + " km"; $("sTime").textContent = Math.round(D.route_s / 60) + " min";
+$("infoRoute").textContent = (D.route_m / 1000).toFixed(1) + " km by road, about " + Math.round(D.route_s / 60) + " min by car";
 
-$("sStops").textContent = NSTOPS; $("sDist").textContent = (ROUTE_M / 1000).toFixed(1) + " km"; $("sTime").textContent = Math.round(ROUTE_S / 60) + " min";
-
-/* ---------------------------------------------------------------- stop list (works even without the map) */
+/* ---------------------------------------------------------------- dock: tabs, stop list, phone sheet */
+function selectTab(n) { ["stops", "sel", "info"].forEach(k => { $("tab-" + k).setAttribute("aria-selected", k === n); $("pane-" + k).hidden = k !== n; }); if (isPhone() && $("dock").classList.contains("collapsed")) setSheet(true); }
+["stops", "sel", "info"].forEach(k => $("tab-" + k).addEventListener("click", () => selectTab(k)));
+function setSheet(open) { $("dock").classList.toggle("collapsed", !open); $("sheetToggle").setAttribute("aria-expanded", open); dockH(); }
+function dockH() { document.documentElement.style.setProperty("--dock-h", $("dock").getBoundingClientRect().height + "px"); }
+$("sheetToggle").onclick = () => setSheet($("dock").classList.contains("collapsed"));
+new ResizeObserver(dockH).observe($("dock"));
 const listEl = $("stops");
 STOPS.forEach((s, i) => {
-  const li = document.createElement("li"); li.id = "li" + i;
-  li.innerHTML = `<button type="button" class="st" data-i="${i}"><span class="num${s.kind === "place" ? "" : s.kind === "guide" ? " guide" : " wp"}">${s.kind === "guide" ? FLAG : s.no}</span>` +
-    `<span><span class="t">${esc(title(s))}${s.kind === "guide" ? '<span class="tagline">Start · guide point</span>' : ""}</span><span class="s">${esc(s.kind === "place" ? s.sub : s.kind === "guide" ? "Join the route here · " + s.sub : s.lat.toFixed(5) + ", " + s.lon.toFixed(5))}</span></span>` +
+  const li = document.createElement("li"), guide = s.kind === "guide", wp = s.kind === "coord";
+  li.innerHTML = `<button type="button" class="st" data-i="${i}"><span class="num${guide ? " guide" : wp ? " wp" : ""}" style="--c:${s.fill || "#192124"}">${guide ? FLAG : s.no}</span>` +
+    `<span><span class="t">${esc(title(s))}${guide ? '<span class="gtag">Start · guide point</span>' : ""}</span><span class="s">${esc(guide ? "Join the route here · " + s.sub : wp ? s.lat.toFixed(5) + ", " + s.lon.toFixed(5) : s.sub)}</span></span>` +
     `<span class="d">${i ? "+" + km(s.leg_m) + "<br>" + km(s.cum_m) : "Start<br>0 km"}</span></button>`;
   listEl.appendChild(li);
 });
-let sel = -1;
-function detailHTML(s) {
-  return `<div class="detail" id="detail">
-    <dl>${s.kind === "guide" ? `<dt>Point</dt><dd>Start · guide point, not a stop</dd><dt>What to do</dt><dd>Reach this point first, then follow the blue route to stop 1, ${esc(STOPS[1].name)} (${km(STOPS[1].leg_m)}).</dd>` : `<dt>Stop</dt><dd>${s.no} of ${NSTOPS}</dd>`}
-    ${s.kind === "place" || s.kind === "guide" ? `<dt>Address</dt><dd>${esc(s.sub)}</dd>` : ""}
-    ${s.note ? `<dt>Note</dt><dd>${esc(s.note)}</dd>` : ""}
-    <dt>Distance</dt><dd>${s.n > 1 ? km(s.leg_m) + " from " + prevName(s.n - 1) + " · " + km(s.cum_m) + " from the start point" : "The route starts here"}</dd>
-    <dt>Location</dt><dd class="mono"><span id="coords">${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}</span></dd></dl>
-    <div class="row"><a class="btn go sm" href="${navUrl(s)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg>${s.kind === "guide" ? "Navigate to start point" : "Navigate here"}</a>
-    <button type="button" class="btn sm" id="copyC">Copy location</button></div>
-    <div class="row nav2"><button type="button" class="btn sm" data-step="-1"${s.n <= 1 ? " disabled" : ""}>‹ ${s.n > 1 ? label(STOPS[s.n - 2]) : "Back"}</button><button type="button" class="btn sm" data-step="1"${s.n >= STOPS.length ? " disabled" : ""}>${s.n < STOPS.length ? label(STOPS[s.n]) : "Next"} ›</button></div>
-  </div>`;
-}
-function showDetail(i) {
-  const old = $("detail"); if (old) old.remove();
-  listEl.querySelectorAll(".st").forEach(b => b.setAttribute("aria-current", +b.dataset.i === i));
-  if (i < 0) return;
-  $("li" + i).insertAdjacentHTML("beforeend", detailHTML(STOPS[i]));
-  const c = $("copyC");
-  c.onclick = () => { const t = STOPS[i].lat.toFixed(6) + ", " + STOPS[i].lon.toFixed(6);
-    const ok = () => { c.textContent = "Copied"; setTimeout(() => c.textContent = "Copy location", 1500); };
-    const pick = () => { try { const r = document.createRange(); r.selectNodeContents($("coords")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } catch (_) {} };
-    try { navigator.clipboard.writeText(t).then(ok, pick); } catch (_) { pick(); } };
-  $("detail").querySelectorAll("[data-step]").forEach(b => b.onclick = () => go(i + +b.dataset.step));
-  requestAnimationFrame(() => $("li" + i).scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" }));
-}
 listEl.addEventListener("click", e => { const b = e.target.closest(".st"); if (b) go(+b.dataset.i); });
-
-/* phone bottom sheet */
-const card = $("card");
-function setSheet(open) { card.classList.toggle("min", !open); $("sheetT").setAttribute("aria-expanded", open); sheetH(); }
-function sheetH() { if (!isPhone()) return; document.documentElement.style.setProperty("--sheet-h", card.getBoundingClientRect().height + "px"); }
-$("sheetT").onclick = () => setSheet(card.classList.contains("min"));
-new ResizeObserver(sheetH).observe(card);
 if (isPhone()) setSheet(false);
-
-function toast(t, ms) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => el.hidden = true, ms || 2600); }
 
 /* ---------------------------------------------------------------- map */
 function hasGL() { try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch (_) { return false; } }
-if (!window.maplibregl || !hasGL()) {
-  $("map").innerHTML = `<div class="nogl"><div><b>This phone or browser can't show the 3D map.</b><span>The stop list still works, and the route opens in Google Maps.</span><a class="btn go" href="${GMAPS_ROUTE}" target="_blank" rel="noopener">Start in Google Maps</a></div></div>`;
-  window.go = i => showDetail(i);
-  return;
-}
+if (!window.maplibregl || !hasGL()) { $("loading").innerHTML = `<div style="display:grid;gap:10px;justify-items:center;text-transform:none;letter-spacing:0;font-family:var(--f-body);font-size:14px;max-width:320px;text-align:center"><b>This phone or browser can't show the 3D plan.</b><span>The stop list still works, and the route opens in Google Maps.</span><a class="btn go" href="${GMAPS}" target="_blank" rel="noopener">Start in Google Maps</a></div>`; window.go = i => selectStop(i); return; }
+
+const LAT = 11.335, MPP_K = 40075016.686 * Math.cos(LAT * Math.PI / 180) / 512;      // metres per pixel = MPP_K / 2^zoom
+const real = (m, z) => m * Math.pow(2, z) / MPP_K;                                     // metres -> pixels at zoom z
+const roadW = extra => ["interpolate", ["exponential", 2], ["zoom"],
+  10, ["match", ["get", "c"], "major", 1.6 + extra * 0.4, "mid", 0.8 + extra * 0.3, 0.25],
+  13, ["match", ["get", "c"], "major", 2.8 + extra * 0.6, "mid", 1.6 + extra * 0.5, 0.7 + extra * 0.3],
+  15.5, ["*", ["+", ["get", "w"], extra], real(1, 15.5)],
+  22, ["*", ["+", ["get", "w"], extra], real(1, 22)]];
 const SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
-const OMT = "https://tiles.openfreemap.org/planet";
-const GLYPHS = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+const PLAN_LAYERS = ["frame", "frame-edge", "board", "green", "water", "rail", "kerb", "road", "dash", "grid", "grid-edge", "grid-lab", "bld-apx", "bld-osm", "blocks", "trees"];
+const SAT_LAYERS = ["sat", "sat-roads"];
 const nameExpr = ["coalesce", ["get", "name:latin"], ["get", "name_en"], ["get", "name"]];
-const SKY = { "sky-color": "#7FB3E8", "horizon-color": "#DCE8F0", "fog-color": "#DCE8F0", "sky-horizon-blend": 0.6, "horizon-fog-blend": 0.7, "fog-ground-blend": 0.75, "atmosphere-blend": 0.7 };
-function satelliteStyle() {
-  return {
-    version: 8, glyphs: GLYPHS, sky: SKY,
-    sources: {
-      sat: { type: "raster", tiles: [SAT], tileSize: 256, maxzoom: 19, attribution: 'Imagery © <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics' },
-      omt: { type: "vector", url: OMT, attribution: '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' }
-    },
-    layers: [
-      { id: "bg", type: "background", paint: { "background-color": "#22302A" } },
-      { id: "sat", type: "raster", source: "sat", paint: { "raster-contrast": 0.08, "raster-saturation": 0.05, "raster-fade-duration": 200 } },
-      { id: "rd-minor", type: "line", source: "omt", "source-layer": "transportation", minzoom: 13,
-        filter: ["in", ["get", "class"], ["literal", ["tertiary", "minor", "service"]]],
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "rgba(255,255,255,0.32)", "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.5, 16, 1.4, 19, 4] } },
-      { id: "rd-major", type: "line", source: "omt", "source-layer": "transportation",
-        filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary"]]],
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "rgba(255,221,140,0.62)", "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.6, 13, 1.6, 16, 3, 19, 7] } },
-      { id: "water-name", type: "symbol", source: "omt", "source-layer": "water_name",
-        layout: { "text-field": nameExpr, "text-font": ["Noto Sans Italic"], "text-size": 12 }, paint: { "text-color": "#CFE6FF", "text-halo-color": "rgba(0,0,0,.8)", "text-halo-width": 1.4 } },
-      { id: "poi", type: "symbol", source: "omt", "source-layer": "poi", minzoom: 15.5, filter: ["has", "name"],
-        layout: { "text-field": nameExpr, "text-font": ["Noto Sans Regular"], "text-size": 11, "text-max-width": 9, "text-padding": 4 },
-        paint: { "text-color": "#FFFFFF", "text-halo-color": "rgba(0,0,0,.85)", "text-halo-width": 1.4 } },
-      { id: "rd-name", type: "symbol", source: "omt", "source-layer": "transportation_name", minzoom: 13.5,
-        layout: { "symbol-placement": "line", "text-field": nameExpr, "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 13.5, 10, 18, 14], "text-letter-spacing": 0.03, "text-max-angle": 30 },
-        paint: { "text-color": "#FFFFFF", "text-halo-color": "rgba(0,0,0,.88)", "text-halo-width": 1.6 } },
-      { id: "place", type: "symbol", source: "omt", "source-layer": "place",
-        filter: ["in", ["get", "class"], ["literal", ["city", "town", "suburb", "neighbourhood", "quarter", "village", "hamlet"]]],
-        layout: { "text-field": nameExpr, "text-font": ["Noto Sans Bold"], "text-transform": "uppercase", "text-letter-spacing": 0.12,
-          "text-size": ["match", ["get", "class"], "city", 16, "town", 15, "suburb", 12.5, 11.5], "text-max-width": 8, "text-padding": 6 },
-        paint: { "text-color": "#FFFFFF", "text-halo-color": "rgba(0,0,0,.8)", "text-halo-width": 1.8 } }
-    ]
-  };
-}
-const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
-
-const bounds = ROUTE.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(ROUTE[0], ROUTE[0]));
-const map = new maplibregl.Map({
-  container: "map", style: satelliteStyle(), bounds, fitBoundsOptions: { padding: 40 }, pitch: 48, bearing: -10,
-  maxPitch: 72, attributionControl: false, dragRotate: true, touchPitch: true, cooperativeGestures: false, fadeDuration: 150
-});
-map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
-map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showZoom: true }), "bottom-right");
-const geo = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showUserHeading: true, fitBoundsOptions: { maxZoom: 16.5 } });
-map.addControl(geo, "bottom-right");
-map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 110 }), isPhone() ? "bottom-left" : "bottom-right");
-geo.on("error", () => toast("Your location isn't available. Allow location for this page in your browser settings."));
-
-/* route + stops, added again whenever the map style changes */
-const routeGeo = { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: ROUTE } };
-const stopsGeo = { type: "FeatureCollection", features: STOPS.map((s, i) => ({ type: "Feature", id: i, properties: { n: String(s.n), name: s.kind === "place" ? s.name : s.kind === "guide" ? "Start · " + s.name : "", place: s.kind === "place" || s.kind === "guide" }, geometry: { type: "Point", coordinates: [s.lon, s.lat] } })) };
-function arrowImage() {
+const style = {
+  version: 8, glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+  sky: { "sky-color": "#C9DAE6", "horizon-color": "#E7ECEA", "fog-color": "#E2E6E3", "sky-horizon-blend": 0.7, "horizon-fog-blend": 0.6, "fog-ground-blend": 0.82, "atmosphere-blend": 0.6 },
+  light: { anchor: "viewport", color: "#FFFFFF", intensity: 0.42, position: [1.25, 205, 38] },
+  sources: {
+    sat: { type: "raster", tiles: [SAT], tileSize: 256, maxzoom: 19 },
+    frame: { type: "geojson", data: D.frame }, board: { type: "geojson", data: D.board },
+    green: { type: "geojson", data: D.green }, water: { type: "geojson", data: D.water }, rail: { type: "geojson", data: D.rail },
+    roads: { type: "geojson", data: D.roads }, grid: { type: "geojson", data: D.grid }, gridlab: { type: "geojson", data: D.gridlab },
+    bapx: { type: "geojson", data: D.bapx }, bosm: { type: "geojson", data: D.bosm }, blocks: { type: "geojson", data: D.blocks, promoteId: "i" },
+    trees: { type: "geojson", data: D.trees },
+    route: { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: ROUTE } }, lineMetrics: true }
+  },
+  layers: [
+    { id: "bg", type: "background", paint: { "background-color": "#D9DFDA" } },
+    { id: "sat", type: "raster", source: "sat", layout: { visibility: "none" }, paint: { "raster-contrast": 0.06, "raster-fade-duration": 150 } },
+    { id: "frame", type: "fill", source: "frame", paint: { "fill-color": "#E7EAE5" } },
+    { id: "frame-edge", type: "line", source: "frame", paint: { "line-color": "#2C3336", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2, 16, 6] } },
+    { id: "board", type: "fill", source: "board", paint: { "fill-color": "#EAEDE8" } },
+    { id: "green", type: "fill", source: "green", paint: { "fill-color": "#C9DDBC" } },
+    { id: "water", type: "fill", source: "water", paint: { "fill-color": "#A7C9DE" } },
+    { id: "rail", type: "line", source: "rail", paint: { "line-color": "#8C735F", "line-width": ["interpolate", ["linear"], ["zoom"], 11, 0.6, 17, 2.4], "line-dasharray": [3, 2] } },
+    { id: "kerb", type: "line", source: "roads", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#FBFBF7", "line-width": roadW(3) } },
+    { id: "road", type: "line", source: "roads", layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": ["match", ["get", "c"], "major", "#3A4044", "mid", "#474D51", "#6E7376"], "line-width": roadW(0) } },
+    { id: "dash", type: "line", source: "roads", minzoom: 14.5, filter: ["==", ["get", "c"], "major"],
+      paint: { "line-color": "#EEE4BE", "line-width": ["interpolate", ["exponential", 2], ["zoom"], 14.5, 0.7, 17, 1.4, 22, real(0.4, 22)], "line-dasharray": [5, 7] } },
+    { id: "grid", type: "line", source: "grid", filter: ["==", ["get", "edge"], 0], paint: { "line-color": "rgba(25,33,36,0.32)", "line-width": 1.2, "line-dasharray": [4, 4] } },
+    { id: "grid-edge", type: "line", source: "grid", filter: ["==", ["get", "edge"], 1], paint: { "line-color": "#192124", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1.4, 16, 3] } },
+    { id: "sat-roads", type: "line", source: "roads", layout: { visibility: "none", "line-cap": "round", "line-join": "round" }, filter: ["!=", ["get", "c"], "minor"],
+      paint: { "line-color": "rgba(255,226,150,0.5)", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 0.6, 16, 2.5] } },
+    { id: "route-glow", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": "rgba(246,179,0,0.28)", "line-width": ["interpolate", ["exponential", 2], ["zoom"], 10, 14, 15, 22, 18, 46, 22, real(30, 22)], "line-blur": 3 } },
+    { id: "route-edge", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": "#3A2C00", "line-opacity": 0.55, "line-width": ["interpolate", ["exponential", 2], ["zoom"], 10, 6, 15, 8, 17, 12, 22, real(11, 22)] } },
+    { id: "route", type: "line", source: "route", layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": "#F6B300", "line-width": ["interpolate", ["exponential", 2], ["zoom"], 10, 4.2, 15, 6, 17, 9.5, 22, real(9, 22)] } },
+    { id: "route-arrows", type: "symbol", source: "route", minzoom: 13,
+      layout: { "symbol-placement": "line", "symbol-spacing": ["interpolate", ["linear"], ["zoom"], 13, 60, 18, 90], "icon-image": "chev", "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.5, 17, 0.75, 20, 1.2],
+        "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-rotation-alignment": "map", "icon-pitch-alignment": "map" } },
+    { id: "grid-lab", type: "symbol", source: "gridlab", layout: { "text-field": ["get", "t"], "text-font": ["Noto Sans Regular"], "text-size": ["interpolate", ["linear"], ["zoom"], 10, 12, 14, 20], "text-allow-overlap": true },
+      paint: { "text-color": "#192124", "text-halo-color": "#E7EAE5", "text-halo-width": 1 } },
+    { id: "bld-apx", type: "fill-extrusion", source: "bapx", minzoom: 11.5,
+      paint: { "fill-extrusion-color": ["match", ["get", "t"], 0, "#F2F0EA", 1, "#ECE9E1", 2, "#F5F3EE", 3, "#E8E5DC", 4, "#F0EDE5", "#EEEBE3"],
+        "fill-extrusion-height": ["get", "h"], "fill-extrusion-opacity": 1, "fill-extrusion-vertical-gradient": true } },
+    { id: "bld-osm", type: "fill-extrusion", source: "bosm", minzoom: 11.5,
+      paint: { "fill-extrusion-color": "#DCE6EC", "fill-extrusion-height": ["get", "h"], "fill-extrusion-vertical-gradient": true } },
+    { id: "trees", type: "fill-extrusion", source: "trees", minzoom: 11,
+      paint: { "fill-extrusion-color": ["match", ["get", "k"], 0, "#6E8D62", 1, "#557650", 2, "#7C9A6A", "#78644E"], "fill-extrusion-base": ["get", "b"], "fill-extrusion-height": ["get", "h"], "fill-extrusion-vertical-gradient": true } },
+    { id: "blocks", type: "fill-extrusion", source: "blocks",
+      paint: { "fill-extrusion-color": ["get", "c"], "fill-extrusion-height": ["case", ["boolean", ["feature-state", "sel"], false], 46, ["get", "h"]], "fill-extrusion-vertical-gradient": true } },
+    { id: "road-names", type: "symbol", source: "roads", minzoom: 14.6, filter: ["has", "n"],
+      layout: { "symbol-placement": "line", "text-field": ["get", "n"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 14.6, 10, 18, 13], "text-letter-spacing": 0.08, "text-transform": "uppercase", "text-max-angle": 28 },
+      paint: { "text-color": "#4A5458", "text-halo-color": "#F2F4F0", "text-halo-width": 1.6 } }
+  ]
+};
+const PLACES_LAYER = { id: "places", type: "symbol", source: "omt", "source-layer": "place", filter: ["in", ["get", "class"], ["literal", ["city", "town", "suburb", "neighbourhood", "quarter", "village"]]],
+      layout: { "text-field": nameExpr, "text-font": ["Noto Sans Bold"], "text-transform": "uppercase", "text-letter-spacing": 0.14, "text-size": ["match", ["get", "class"], "city", 15, "town", 14, 11.5], "text-max-width": 8, "text-padding": 8 },
+      paint: { "text-color": "#5A666B", "text-halo-color": "#EEF1EC", "text-halo-width": 1.8 } };
+function chevImage() {
   const c = document.createElement("canvas"), r = 2; c.width = c.height = 24 * r; const g = c.getContext("2d"); g.scale(r, r);
-  g.fillStyle = "#FFFFFF"; g.beginPath(); g.moveTo(7, 6); g.lineTo(17, 12); g.lineTo(7, 18); g.lineTo(9.5, 12); g.closePath(); g.fill();
+  g.fillStyle = "rgba(25,33,36,0.85)"; g.beginPath(); g.moveTo(7, 6.5); g.lineTo(17, 12); g.lineTo(7, 17.5); g.lineTo(9.6, 12); g.closePath(); g.fill();
   return { width: c.width, height: c.height, data: g.getImageData(0, 0, c.width, c.height).data };
 }
-function badgeImage(st) {
-  if (st.kind === "guide") {
-    const r = 2, R = 15, S = (R + 4) * 2, c = document.createElement("canvas"); c.width = c.height = S * r; const g = c.getContext("2d"); g.scale(r, r);
-    g.beginPath(); g.arc(S / 2, S / 2, R + 2.5, 0, Math.PI * 2); g.fillStyle = "#FFFFFF"; g.fill();
-    g.beginPath(); g.arc(S / 2, S / 2, R, 0, Math.PI * 2); g.fillStyle = "#0F7A4A"; g.fill();
-    const o = S / 2 - 7; g.fillStyle = "#FFFFFF"; g.fillRect(o, S / 2 - 8, 2.2, 17);
-    g.beginPath(); g.moveTo(o + 2, S / 2 - 8); g.lineTo(o + 14, S / 2 - 8); g.lineTo(o + 11, S / 2 - 3.5); g.lineTo(o + 14, S / 2 + 1); g.lineTo(o + 2, S / 2 + 1); g.closePath(); g.fill();
-    return { width: c.width, height: c.height, data: g.getImageData(0, 0, c.width, c.height).data };
-  }
-  const place = st.kind === "place", r = 2, R = place ? 14 : 11, S = (R + 4) * 2;
-  const c = document.createElement("canvas"); c.width = c.height = S * r; const g = c.getContext("2d"); g.scale(r, r);
-  g.beginPath(); g.arc(S / 2, S / 2, R + 2.5, 0, Math.PI * 2); g.fillStyle = place ? "#FFFFFF" : "#0E1B24"; g.fill();
-  g.beginPath(); g.arc(S / 2, S / 2, R, 0, Math.PI * 2); g.fillStyle = place ? "#0E1B24" : "#FFFFFF"; g.fill();
-  g.fillStyle = place ? "#FFFFFF" : "#0E1B24"; g.textAlign = "center"; g.textBaseline = "middle";
-  g.font = `700 ${place ? 13 : 11}px "IBM Plex Mono", ui-monospace, Menlo, monospace`; g.fillText(String(st.no), S / 2, S / 2 + 0.5);
-  return { width: c.width, height: c.height, data: g.getImageData(0, 0, c.width, c.height).data };
-}
-let progress = 1;
-function addOverlay() {
-  if (map.getSource("route")) return;
-  if (!map.hasImage("arrow")) map.addImage("arrow", arrowImage(), { pixelRatio: 2 });
-  map.addSource("route", { type: "geojson", data: routeGeo, lineMetrics: true });
-  map.addSource("stops", { type: "geojson", data: stopsGeo });
-  map.addSource("stopnames", { type: "geojson", data: { type: "FeatureCollection", features: stopsGeo.features.filter(f => f.properties.place) } });
-  const w = (a, b) => ["interpolate", ["exponential", 1.4], ["zoom"], 10, a, 14, a * 1.9, 18, b];
-  map.addLayer({ id: "route-shadow", type: "line", source: "route", layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": "rgba(0,0,0,0.35)", "line-width": w(9, 26), "line-blur": 4, "line-translate": [1, 2] } });
-  map.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": "#FFFFFF", "line-width": w(6.5, 20) } });
-  map.addLayer({ id: "route-line", type: "line", source: "route", layout: { "line-join": "round", "line-cap": "round" },
-    paint: { "line-color": "#2F6BF2", "line-width": w(4, 14) } });
-  map.addLayer({ id: "route-arrows", type: "symbol", source: "route", minzoom: 12.5,
-    layout: { "symbol-placement": "line", "symbol-spacing": ["interpolate", ["linear"], ["zoom"], 12.5, 70, 18, 110], "icon-image": "arrow", "icon-size": ["interpolate", ["linear"], ["zoom"], 12.5, 0.55, 18, 1.1],
-      "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-rotation-alignment": "map", "icon-pitch-alignment": "map" } });
-  // numbered badges are drawn as images, so they show even if the label font is slow to load
-  STOPS.forEach(st => { const id = "stop-" + st.n; if (!map.hasImage(id)) map.addImage(id, badgeImage(st), { pixelRatio: 2 }); });
-  map.addLayer({ id: "stop-ring", type: "circle", source: "stops",
-    paint: { "circle-radius": ["case", ["boolean", ["feature-state", "sel"], false], 23, 0], "circle-color": "rgba(255,211,77,0.28)",
-      "circle-stroke-color": "#FFD34D", "circle-stroke-width": ["case", ["boolean", ["feature-state", "sel"], false], 3.5, 0], "circle-pitch-alignment": "viewport" } });
-  map.addLayer({ id: "stop-dot", type: "symbol", source: "stops",
-    layout: { "icon-image": ["concat", "stop-", ["get", "n"]], "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-pitch-alignment": "viewport",
-      "symbol-sort-key": ["-", 0, ["to-number", ["get", "n"]]], "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.82, 15, 1] } });
-  map.addLayer({ id: "stop-name", type: "symbol", source: "stopnames",
-    layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 11, 12, 17, 15], "text-variable-anchor": ["left", "right", "top", "bottom"], "text-radial-offset": 1.35, "text-justify": "auto",
-      "text-max-width": 12, "text-padding": 2, "symbol-sort-key": ["to-number", ["get", "n"]] },
-    paint: { "text-color": "#FFFFFF", "text-halo-color": "#0E1B24", "text-halo-width": 2.2 } });
-  if (sel >= 0) map.setFeatureState({ source: "stops", id: sel }, { sel: true });
-  setProgress(progress);
-}
-function setProgress(p) {
-  progress = p; if (!map.getLayer("route-line")) return;
-  const g = p >= 1 ? null : ["step", ["line-progress"], "#2F6BF2", Math.max(0.0001, p), "rgba(47,107,242,0)"];
-  const gc = p >= 1 ? null : ["step", ["line-progress"], "#FFFFFF", Math.max(0.0001, p), "rgba(255,255,255,0.35)"];
-  map.setPaintProperty("route-line", "line-gradient", g); map.setPaintProperty("route-casing", "line-gradient", gc);
-}
-map.on("style.load", addOverlay);
-map.on("click", "stop-dot", e => { const f = e.features && e.features[0]; if (f) go(f.id); });
-map.on("mouseenter", "stop-dot", () => map.getCanvas().style.cursor = "pointer");
-map.on("mouseleave", "stop-dot", () => map.getCanvas().style.cursor = "");
-map.on("error", e => { if (e && e.error && /Failed to fetch|NetworkError|load/i.test(String(e.error.message))) { if (!toast.net) { toast.net = true; toast("Some map pictures didn't load. Check the internet connection.", 4000); } } });
+const bounds = ROUTE.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(ROUTE[0], ROUTE[0]));
+const map = new maplibregl.Map({ container: "map", style, bounds, fitBoundsOptions: { padding: 30 }, pitch: 0, bearing: 0, maxPitch: 72,
+  attributionControl: false, fadeDuration: 150, antialias: !/iPhone|iPad|Android/.test(navigator.userAgent) });
+map.on("styleimagemissing", e => { if (e.id === "chev" && !map.hasImage("chev")) map.addImage("chev", chevImage(), { pixelRatio: 2 }); });
+let ready = false;
+// start as soon as the plan's own layers are ready; online place names are added after and can never hold the map up
+map.once("style.load", () => {
+  ready = true; const ld = $("loading"); if (ld) ld.remove();
+  if (!map.hasImage("chev")) map.addImage("chev", chevImage(), { pixelRatio: 2 });
+  try { map.addSource("omt", { type: "vector", url: "https://tiles.openfreemap.org/planet" }); map.addLayer(PLACES_LAYER); } catch (_) {}
+  applyVis(); intro();
+});
+map.on("error", e => { const m = String(e && e.error && e.error.message || ""); if (/fetch|network|load/i.test(m) && !toast.net) { toast.net = true; toast("Some map parts didn't load. Check the internet connection.", 4000); } });
+const geo = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showUserHeading: true, fitBoundsOptions: { maxZoom: 16.5 } });
+map.addControl(geo, "bottom-left");
+geo.on("error", () => toast("Your location isn't available. Allow location for this page in your browser settings."));
+$("locate").onclick = () => { try { geo.trigger(); } catch (_) { toast("Your location isn't available on this device."); } };
 
-/* camera helpers */
+/* camera framing that keeps the route clear of the panels */
+function pad() {
+  const r = $("map").getBoundingClientRect(), t = document.querySelector(".tools").getBoundingClientRect(), d = $("dock").getBoundingClientRect();
+  if (isPhone()) return { top: Math.max(90, t.bottom - r.top + 14), bottom: Math.max(40, r.bottom - d.top + 16), left: 26, right: 26 };
+  return { top: Math.min(t.bottom - r.top + 20, r.height * 0.3), bottom: 70, left: d.right - r.left + 28, right: 120 };
+}
+let tilt = true;
+function overview(ms) { map.fitBounds(bounds, { padding: pad(), pitch: tilt ? 52 : 0, bearing: tilt ? -14 : 0, duration: reduced ? 0 : (ms ?? 1800), maxZoom: 15 }); }
+function intro() { const c = map.cameraForBounds(bounds, { padding: pad() }); if (!c) return overview(0); map.jumpTo({ center: c.center, zoom: c.zoom - 1.2, pitch: 0, bearing: 18 }); setTimeout(() => overview(3200), 250); }
+
+/* ---------------------------------------------------------------- stop chips (HTML, like the Ziyafat Qadam plan) */
+const BLOCK = {}; D.blocks.features.forEach(f => BLOCK[f.properties.i] = f.properties.h);
+let mode = "plan", sel = -1, showLabels = true, showRoute = true;
+const chips = STOPS.map((s, i) => {
+  const el = document.createElement("div"), guide = s.kind === "guide", wp = s.kind === "coord";
+  el.className = "tag" + (wp ? " wp" : "");
+  el.innerHTML = wp ? `<b>${s.no}</b>` : `<b><span class="nb" style="--c:${guide ? "#0F7A4A" : s.fill}">${guide ? FLAG : s.no}</span><span class="tx">${esc((guide ? "Start · " + s.name : s.name).toUpperCase())}</span></b>`;
+  el.addEventListener("click", ev => { ev.stopPropagation(); go(i); });
+  const at = s.top || [s.lon, s.lat];
+  const mk = new maplibregl.Marker({ element: el, anchor: "bottom" }).setLngLat(at).addTo(map);
+  return { el, mk, s, i, at, h: BLOCK[i] || 0, w: 0, cw: 0, hh: 0, pri: guide ? 1 : wp ? 3 : 2 };
+});
+let chipQueued = false;
+function queueChips() { if (!chipQueued) { chipQueued = true; requestAnimationFrame(placeChips); } }
+function placeChips() {
+  chipQueued = false;
+  const z = map.getZoom(), mpp = MPP_K / Math.pow(2, z), sp = Math.sin(map.getPitch() * Math.PI / 180), W = map.getContainer().clientWidth, H = map.getContainer().clientHeight;
+  const order = chips.slice().sort((a, b) => ((b.i === sel) - (a.i === sel)) || a.pri - b.pri || a.i - b.i), boxes = [];
+  const hit = bx => boxes.some(b => !(bx.x1 < b.x0 || bx.x0 > b.x1 || bx.y1 < b.y0 || bx.y0 > b.y1));
+  order.forEach(c => {
+    if (!c.w) { c.el.classList.remove("compact"); c.w = c.el.offsetWidth; c.hh = c.el.offsetHeight; c.el.classList.add("compact"); c.cw = c.el.offsetWidth; c.el.classList.remove("compact"); }
+    const lift = mode === "plan" && c.h ? (c.h * (c.i === sel ? 46 / c.h : 1)) / mpp * sp + 2 : 0;
+    c.mk.setOffset([0, -lift]);
+    const p = map.project(c.at), x = p.x, y = p.y - lift, isSel = c.i === sel;
+    const on = (showLabels || isSel) && (c.s.kind !== "coord" || showRoute) && x > -60 && x < W + 60 && y > -40 && y < H + 60;
+    if (!on) { c.el.classList.add("off"); return; }
+    const box = w => ({ x0: x - w / 2 - 2, x1: x + w / 2 + 2, y0: y - c.hh, y1: y });
+    let b = box(c.w), compact = false, clash = !isSel && hit(b);
+    if ((clash || b.x0 < 4 || b.x1 > W - 4) && c.s.kind !== "coord") { b = box(c.cw); compact = true; clash = !isSel && hit(b); }
+    c.el.classList.toggle("compact", compact); c.el.classList.toggle("sel", isSel);
+    if (clash) c.el.classList.add("off"); else { c.el.classList.remove("off"); boxes.push(b); }
+  });
+}
+map.on("move", queueChips); map.on("resize", () => { chips.forEach(c => c.w = 0); queueChips(); });
+try { document.fonts.ready.then(() => { chips.forEach(c => c.w = 0); queueChips(); }); } catch (_) {}
+
+/* ---------------------------------------------------------------- selecting a point */
 const R2D = 180 / Math.PI, D2R = Math.PI / 180;
 const CUM = [0]; for (let i = 1; i < ROUTE.length; i++) CUM.push(CUM[i - 1] + dist(ROUTE[i - 1], ROUTE[i]));
 const RL = CUM[CUM.length - 1];
-function dist(a, b) { const kx = Math.cos(a[1] * D2R) * 111320, ky = 110574; return Math.hypot((b[0] - a[0]) * kx, (b[1] - a[1]) * ky); }
+function dist(a, b) { const kx = Math.cos(a[1] * D2R) * 111320; return Math.hypot((b[0] - a[0]) * kx, (b[1] - a[1]) * 110574); }
 function at(d) { d = Math.max(0, Math.min(RL, d)); let i = 1; while (i < CUM.length - 1 && CUM[i] < d) i++; const t = (d - CUM[i - 1]) / ((CUM[i] - CUM[i - 1]) || 1), a = ROUTE[i - 1], b = ROUTE[i]; return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
 function heading(d) { let sx = 0, sy = 0; for (const o of [-360, -180, 0, 180, 360]) { const a = at(d + o - 120), b = at(d + o + 120), kx = Math.cos(a[1] * D2R); const dx = (b[0] - a[0]) * kx, dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; sx += dx / l; sy += dy / l; } return Math.atan2(sx, sy) * R2D; }
-function nearestD(lon, lat) { let best = 0, bd = 1e12; for (let i = 0; i < ROUTE.length; i++) { const d = dist([lon, lat], ROUTE[i]); if (d < bd) { bd = d; best = CUM[i]; } } return best; }
-const STOP_D = STOPS.map(s => nearestD(s.lon, s.lat));
-function pad() {
-  if (isPhone()) return { top: 84, bottom: (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sheet-h")) || 170) + 24, left: 34, right: 70 };
-  return { top: 80, bottom: 60, left: card.getBoundingClientRect().right + 30, right: 70 };
+const STOP_D = STOPS.map(s => { let best = 0, bd = 1e12; ROUTE.forEach((p, i) => { const d = dist([s.lon, s.lat], p); if (d < bd) { bd = d; best = CUM[i]; } }); return best; });
+function detailHTML(s) {
+  const i = s.n - 1, guide = s.kind === "guide", wp = s.kind === "coord";
+  const sw = guide ? `<span class="det-sw" style="--c:#0F7A4A">${FLAG}</span>` : wp ? `<span class="det-sw wp">${s.no}</span>` : `<span class="det-sw" style="--c:${s.fill}"></span>`;
+  return `<div class="det-head">${sw}<div><div class="det-cat">${esc(title(s))}</div><div class="det-kind">${guide ? "Start · the guide point where you join the route" : wp ? `Stop ${s.no} of ${NST} · a point on the route` : `Stop ${s.no} of ${NST} · ${esc(s.sub)}`}</div></div></div>
+  <dl class="fields">
+    ${guide ? `<dt>What to do</dt><dd>Reach this point first, then follow the gold route to stop 1, ${esc(STOPS[1].name)} (${km(STOPS[1].leg_m)}).</dd>` : ""}
+    ${!wp ? `<dt>Address</dt><dd>${esc(s.sub)}</dd>` : ""}
+    ${s.note ? `<dt>Note</dt><dd>${esc(s.note)}</dd>` : ""}
+    <dt>Distance</dt><dd>${i > 0 ? km(s.leg_m) + " from " + prevName(i) + " · " + km(s.cum_m) + " from the start point" : "The route starts here"}</dd>
+    <dt>Location</dt><dd class="mono"><span id="coords">${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}</span></dd>
+    ${s.moved_m != null ? `<dt>Block</dt><dd>Coloured block ${s.moved_m} m from the exact point, kept clear of the road</dd>` : ""}
+  </dl>
+  <div class="actions"><a class="btn go" href="${navUrl(s)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg>${guide ? "Navigate to start point" : "Navigate here"}</a>
+    <button type="button" class="btn" id="copyC">Copy location</button><button type="button" class="btn" id="zoomTo">Zoom in</button></div>
+  <div class="actions between"><button type="button" class="btn" data-step="-1"${i <= 0 ? " disabled" : ""}>‹ ${i > 0 ? label(STOPS[i - 1]) : "Back"}</button><button type="button" class="btn" data-step="1"${i >= STOPS.length - 1 ? " disabled" : ""}>${i < STOPS.length - 1 ? label(STOPS[i + 1]) : "Next"} ›</button></div>`;
 }
-let tilt = true;
-function overview(ms) { stopTour(); map.fitBounds(bounds, { padding: pad(), pitch: tilt ? 48 : 0, bearing: tilt ? -10 : 0, duration: reduced ? 0 : (ms ?? 1800), maxZoom: 15 }); }
+function selectStop(i) {
+  if (sel >= 0 && map.getSource("blocks")) try { map.setFeatureState({ source: "blocks", id: sel }, { sel: false }); } catch (_) {}
+  sel = i;
+  listEl.querySelectorAll(".st").forEach(b => b.setAttribute("aria-current", +b.dataset.i === i));
+  if (i < 0) { $("det").hidden = true; $("selEmpty").hidden = false; $("tab-sel").textContent = "Selected"; queueChips(); return; }
+  try { if (BLOCK[i]) map.setFeatureState({ source: "blocks", id: i }, { sel: true }); } catch (_) {}
+  const s = STOPS[i]; $("det").innerHTML = detailHTML(s); $("det").hidden = false; $("selEmpty").hidden = true;
+  $("tab-sel").innerHTML = 'Selected<span class="dot"></span>';
+  $("det").querySelectorAll("[data-step]").forEach(b => b.onclick = () => go(i + +b.dataset.step));
+  $("zoomTo").onclick = () => map.flyTo({ center: s.top || [s.lon, s.lat], zoom: 18.2, pitch: tilt ? 64 : 0, padding: pad(), duration: reduced ? 0 : 1400 });
+  const c = $("copyC"); c.onclick = () => { const t = s.lat.toFixed(6) + ", " + s.lon.toFixed(6);
+    const ok = () => { c.textContent = "Copied"; setTimeout(() => c.textContent = "Copy location", 1500); };
+    const pick = () => { try { const r = document.createRange(); r.selectNodeContents($("coords")); const g = getSelection(); g.removeAllRanges(); g.addRange(r); } catch (_) {} };
+    try { navigator.clipboard.writeText(t).then(ok, pick); } catch (_) { pick(); } };
+  selectTab("sel"); queueChips();
+  const row = listEl.querySelector(`.st[data-i="${i}"]`); if (row) row.scrollIntoView({ block: "nearest" });
+}
 function go(i) {
   if (!(i >= 0 && i < STOPS.length)) return;
-  stopTour();
-  if (sel >= 0 && map.getSource("stops")) map.setFeatureState({ source: "stops", id: sel }, { sel: false });
-  sel = i; if (map.getSource("stops")) map.setFeatureState({ source: "stops", id: i }, { sel: true });
-  showDetail(i);
-  if (isPhone() && card.classList.contains("min")) setSheet(true);
+  stopTour(); selectStop(i);
   const s = STOPS[i];
-  map.flyTo({ center: [s.lon, s.lat], zoom: 17.4, pitch: tilt ? 62 : 0, bearing: tilt ? heading(STOP_D[i]) : 0, padding: pad(), duration: reduced ? 0 : 2600, curve: 1.5, essential: true });
+  map.flyTo({ center: s.top || [s.lon, s.lat], zoom: 17.2, pitch: tilt ? 60 : 0, bearing: tilt ? heading(STOP_D[i]) + 25 : 0, padding: pad(), duration: reduced ? 0 : 2600, curve: 1.45, essential: true });
 }
 window.go = go;
-$("overBtn").onclick = () => { if (sel >= 0) { map.setFeatureState({ source: "stops", id: sel }, { sel: false }); sel = -1; showDetail(-1); } overview(); };
+map.on("click", "blocks", e => { const f = e.features && e.features[0]; if (f) go(f.properties.i); });
+map.on("click", e => { const f = map.queryRenderedFeatures(e.point, { layers: ["blocks"] }); if (!f.length && !e.originalEvent.defaultPrevented) {} });
 
-/* satellite / map, 3D / 2D */
-function setStyleMode(sat) {
-  $("vSat").setAttribute("aria-pressed", sat); $("vMap").setAttribute("aria-pressed", !sat);
-  map.setStyle(sat ? satelliteStyle() : MAP_STYLE, { diff: false });
+/* hover tip on desktop */
+const tip = $("tip");
+map.on("mousemove", e => {
+  if (!ready) return;
+  const f = map.queryRenderedFeatures(e.point, { layers: ["blocks", "bld-osm", "bld-apx"].filter(l => map.getLayoutProperty(l, "visibility") !== "none") })[0];
+  map.getCanvas().style.cursor = f && f.layer.id === "blocks" ? "pointer" : "";
+  if (!f) { tip.hidden = true; return; }
+  const s = f.layer.id === "blocks" ? STOPS[f.properties.i] : null;
+  tip.innerHTML = s ? `${esc(s.name)} <small>· stop ${s.no}</small>` : f.layer.id === "bld-osm" ? `Building <small>· mapped in OpenStreetMap</small>` : `Building <small>· drawn from the street layout</small>`;
+  tip.style.left = e.point.x + "px"; tip.style.top = e.point.y + "px"; tip.hidden = false;
+});
+map.getCanvas().addEventListener("mouseleave", () => tip.hidden = true);
+
+/* ---------------------------------------------------------------- look, toggles, camera tools */
+function vis(id, on) { if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", on ? "visible" : "none"); }
+let showB = true, showT = true;
+function applyVis() {
+  const plan = mode === "plan";
+  PLAN_LAYERS.forEach(id => vis(id, plan));
+  SAT_LAYERS.forEach(id => vis(id, !plan));
+  if (plan) { vis("bld-apx", showB); vis("bld-osm", showB); vis("trees", showT); }
+  ["route-glow", "route-edge", "route", "route-arrows"].forEach(id => vis(id, showRoute));
+  vis("road-names", showLabels); vis("places", showLabels);
+  map.setPaintProperty("road-names", "text-color", plan ? "#4A5458" : "#FFFFFF"); map.setPaintProperty("road-names", "text-halo-color", plan ? "#F2F4F0" : "rgba(0,0,0,.85)");
+  if (map.getLayer("places")) { map.setPaintProperty("places", "text-color", plan ? "#5A666B" : "#FFFFFF"); map.setPaintProperty("places", "text-halo-color", plan ? "#EEF1EC" : "rgba(0,0,0,.8)"); }
+  map.setPaintProperty("bg", "background-color", plan ? "#D9DFDA" : "#20302A");
+  $("attr").innerHTML = plan ? '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' : 'Imagery © Esri, Maxar, Earthstar · © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · OpenFreeMap';
+  queueChips();
 }
-map.on("style.load", () => { if ($("vMap").getAttribute("aria-pressed") === "true" && !map.getSky()) try { map.setSky(SKY); } catch (_) {} });
-$("vSat").onclick = () => $("vSat").getAttribute("aria-pressed") !== "true" && setStyleMode(true);
-$("vMap").onclick = () => $("vMap").getAttribute("aria-pressed") !== "true" && setStyleMode(false);
-function setTilt(on) { tilt = on; $("v3d").setAttribute("aria-pressed", on); $("v2d").setAttribute("aria-pressed", !on); map.easeTo({ pitch: on ? 60 : 0, bearing: on ? map.getBearing() : 0, duration: reduced ? 0 : 900 }); }
+function setMode(m) { mode = m; $("mPlan").setAttribute("aria-pressed", m === "plan"); $("mSat").setAttribute("aria-pressed", m === "sat"); if (ready) applyVis(); }
+$("mPlan").onclick = () => setMode("plan"); $("mSat").onclick = () => setMode("sat");
+function chip(id, get, set) { $(id).onclick = () => { set(!get()); $(id).setAttribute("aria-pressed", get()); applyVis(); }; }
+chip("tLabels", () => showLabels, v => showLabels = v);
+chip("tBuild", () => showB, v => showB = v);
+chip("tRoute", () => showRoute, v => showRoute = v);
+chip("tLand", () => showT, v => showT = v);
+function setTilt(on) { tilt = on; $("v3d").setAttribute("aria-pressed", on); $("v2d").setAttribute("aria-pressed", !on); map.easeTo({ pitch: on ? 55 : 0, bearing: on ? map.getBearing() : 0, duration: reduced ? 0 : 900 }); }
 $("v3d").onclick = () => setTilt(true); $("v2d").onclick = () => setTilt(false);
+$("rotL").onclick = () => map.easeTo({ bearing: map.getBearing() - 45, duration: 600 });
+$("rotR").onclick = () => map.easeTo({ bearing: map.getBearing() + 45, duration: 600 });
+$("reset").onclick = () => { stopTour(); selectStop(-1); overview(); };
+$("compass").onclick = () => map.easeTo({ bearing: 0, duration: 600 });
+$("zIn").onclick = () => map.easeTo({ zoom: map.getZoom() + 1, duration: 300 });
+$("zOut").onclick = () => map.easeTo({ zoom: map.getZoom() - 1, duration: 300 });
+map.on("rotate", () => $("needle").setAttribute("transform", `rotate(${(-map.getBearing()).toFixed(1)})`));
+const fsOK = document.fullscreenEnabled || document.webkitFullscreenEnabled; if (!fsOK) $("fs").hidden = true;
+$("fs").onclick = () => { const app = $("app"), on = document.fullscreenElement || document.webkitFullscreenElement;
+  try { const pr = on ? (document.exitFullscreen || document.webkitExitFullscreen).call(document) : (app.requestFullscreen || app.webkitRequestFullscreen).call(app); if (pr && pr.catch) pr.catch(() => {}); } catch (_) {} };
+if (isPhone()) $("help").textContent = "Drag to move. Two fingers to rotate, tilt and zoom.";
 
-/* fly the route: the camera drives along the blue line, stops light up as it passes them */
+/* ---------------------------------------------------------------- fly the route */
 let tour = null;
+function setProgress(p) {
+  if (!map.getLayer("route")) return;
+  const g = p >= 1 ? null : ["step", ["line-progress"], "#F6B300", Math.max(0.0001, p), "rgba(246,179,0,0)"];
+  const ge = p >= 1 ? null : ["step", ["line-progress"], "rgba(58,44,0,0.55)", Math.max(0.0001, p), "rgba(58,44,0,0.12)"];
+  map.setPaintProperty("route", "line-gradient", g); map.setPaintProperty("route-edge", "line-gradient", ge);
+}
 function startTour() {
-  if (sel >= 0) { map.setFeatureState({ source: "stops", id: sel }, { sel: false }); sel = -1; showDetail(-1); }
-  if (isPhone()) setSheet(false);
-  tour = { t0: performance.now(), dur: reduced ? 1 : 75000, last: -1 };
+  selectStop(-1); if (isPhone()) setSheet(false);
+  tour = { t0: performance.now(), dur: reduced ? 1 : 80000, last: -1 };
   $("tour").hidden = false; $("flyBtn").setAttribute("aria-pressed", "true"); setProgress(0);
-  const p0 = at(0);
-  map.jumpTo({ center: p0, zoom: 15.6, pitch: tilt ? 64 : 0, bearing: tilt ? heading(0) : 0, padding: pad() });
+  map.jumpTo({ center: at(0), zoom: 16, pitch: tilt ? 62 : 0, bearing: tilt ? heading(0) : 0, padding: pad() });
   requestAnimationFrame(stepTour);
 }
-function stopTour() {
-  if (!tour) return; tour = null; $("tour").hidden = true; $("flyBtn").setAttribute("aria-pressed", "false"); setProgress(1);
-}
+function stopTour() { if (!tour) return; tour = null; $("tour").hidden = true; $("flyBtn").setAttribute("aria-pressed", "false"); setProgress(1); }
 function stepTour(now) {
   if (!tour) return;
   const u = Math.min(1, (now - tour.t0) / tour.dur), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, d = e * RL;
@@ -410,24 +628,15 @@ function stepTour(now) {
   let k = 0; STOP_D.forEach((sd, i) => { if (sd <= d + 30) k = i; });
   if (k !== tour.last) { tour.last = k; const s = STOPS[k]; $("tourT").textContent = `${s.kind === "guide" ? "Start" : s.no} · ${title(s)}`; }
   $("tourBar").style.width = (e * 100).toFixed(1) + "%";
-  const c = at(d + 220), b = heading(d);
-  const cur = map.getBearing(); let db = ((b - cur + 540) % 360) - 180;
-  map.jumpTo({ center: c, bearing: tilt ? cur + db * 0.06 : 0, zoom: 15.6, pitch: tilt ? 64 : 0 });
-  if (u < 1) requestAnimationFrame(stepTour);
-  else { stopTour(); overview(2200); toast("That's the whole route. Tap a stop to see it up close."); }
+  const cur = map.getBearing(), b = heading(d), db = ((b - cur + 540) % 360) - 180;
+  map.jumpTo({ center: at(d + 200), bearing: tilt ? cur + db * 0.05 : 0, zoom: 16, pitch: tilt ? 62 : 0 });
+  if (u < 1) requestAnimationFrame(stepTour); else { stopTour(); overview(2400); toast("That's the whole route. Tap a stop to see it up close."); }
 }
 $("flyBtn").onclick = () => tour ? stopTour() : startTour();
 $("tourStop").onclick = () => stopTour();
-map.on("dragstart", () => { if (tour) stopTour(); });
-map.on("wheel", () => { if (tour) stopTour(); });
-map.on("touchstart", () => { if (tour) stopTour(); });
-
-map.once("load", () => {
-  setTimeout(() => overview(1600), 300);
-  const at = document.querySelector(".maplibregl-ctrl-attrib"); if (at) { at.classList.remove("maplibregl-compact-show"); at.removeAttribute("open"); }
-});
-addEventListener("keydown", e => { if (e.key === "Escape" && tour) stopTour(); });
-window.__erodeMap = { map, go, overview, startTour, stopTour };
+["dragstart", "wheel", "touchstart"].forEach(ev => map.on(ev, () => { if (tour) stopTour(); }));
+addEventListener("keydown", e => { if (e.key === "Escape") { if (tour) stopTour(); else selectStop(-1); } });
+window.__plan = { map, go, overview, startTour, stopTour, setMode, chips };
 })();
 </script>
 </body>
