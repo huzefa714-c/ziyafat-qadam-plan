@@ -312,7 +312,7 @@ function addOverlay() {
   map.addLayer({ id: "stop-ring", type: "circle", source: "stops",
     paint: { "circle-radius": ["case", ["boolean", ["feature-state", "sel"], false], 23, 0], "circle-color": "rgba(255,211,77,0.28)",
       "circle-stroke-color": "#FFD34D", "circle-stroke-width": ["case", ["boolean", ["feature-state", "sel"], false], 3.5, 0], "circle-pitch-alignment": "viewport" } });
-  map.addLayer({ id: "stop-dot", type: "symbol", source: "stops",
+  map.addLayer({ id: "stop-dot", type: "symbol", source: "stops", filter: ["any", ["==", ["get", "place"], true], [">=", ["zoom"], 13]],
     layout: { "icon-image": ["concat", "stop-", ["get", "n"]], "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-pitch-alignment": "viewport",
       "symbol-sort-key": ["-", 0, ["to-number", ["get", "n"]]], "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.82, 15, 1] } });
   map.addLayer({ id: "stop-name", type: "symbol", source: "stopnames",
@@ -344,7 +344,7 @@ function heading(d) { let sx = 0, sy = 0; for (const o of [-360, -180, 0, 180, 3
 function nearestD(lon, lat) { let best = 0, bd = 1e12; for (let i = 0; i < ROUTE.length; i++) { const d = dist([lon, lat], ROUTE[i]); if (d < bd) { bd = d; best = CUM[i]; } } return best; }
 const STOP_D = STOPS.map(s => nearestD(s.lon, s.lat));
 function pad() {
-  if (isPhone()) return { top: 70, bottom: (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sheet-h")) || 170) + 20, left: 30, right: 30 };
+  if (isPhone()) return { top: 84, bottom: (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sheet-h")) || 170) + 24, left: 34, right: 70 };
   return { top: 80, bottom: 60, left: card.getBoundingClientRect().right + 30, right: 70 };
 }
 let tilt = true;
@@ -406,7 +406,10 @@ map.on("dragstart", () => { if (tour) stopTour(); });
 map.on("wheel", () => { if (tour) stopTour(); });
 map.on("touchstart", () => { if (tour) stopTour(); });
 
-map.once("load", () => setTimeout(() => overview(1600), 300));
+map.once("load", () => {
+  setTimeout(() => overview(1600), 300);
+  const at = document.querySelector(".maplibregl-ctrl-attrib"); if (at) { at.classList.remove("maplibregl-compact-show"); at.removeAttribute("open"); }
+});
 addEventListener("keydown", e => { if (e.key === "Escape" && tour) stopTour(); });
 window.__erodeMap = { map, go, overview, startTour, stopTour };
 })();
