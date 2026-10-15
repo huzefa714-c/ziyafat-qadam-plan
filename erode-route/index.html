@@ -208,6 +208,8 @@ const stops = S.stops;
 stops[0].kind = "guide";
 // stops 5 and 7 on the map (link points 6 and 8) are houses
 [[5, "Near Mufaddal Beehive, Vairapalayam"], [7, "Near 2, 8th C Street, Thirunagar Colony"]].forEach(([k, w]) => { stops[k].kind = "place"; stops[k].name = "House"; stops[k].sub = w; });
+// the end point is Samraj Textiles Pvt Ltd, a named stop, not a waypoint
+{ const e = stops[stops.length - 1]; if (/Samraj/.test(e.sub)) { e.kind = "place"; e.name = "Samraj Textiles Pvt Ltd"; e.sub = "End of the route · near 2, 8th C Street"; } }
 const FLAG = '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" style="fill:#fff;display:block"><path d="M6 22V3h12l-2.6 4.5L18 12H8v10z"/></svg>';
 const disp = i => i === 0 ? "S" : String(i);
 
