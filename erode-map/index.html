@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0E1B24">
+<meta name="description" content="Live 3D satellite map of the Erode route for Burhani Guards: ten stops in order, with Google Maps directions to each.">
+<title>Erode Route Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+/* Layout: full-screen satellite map; route card floats top-left (bottom sheet on phones); view switches top-right. */
+:root{
+  --panel:rgba(250,251,249,.96); --panel-solid:#FAFBF9; --ink:#14212B; --muted:#5B6873; --line:#D6DDE1; --chip:#EDF1F3;
+  --route:#2F6BF2; --route-ink:#1546B8; --go:#0F7A4A; --go-ink:#FFFFFF; --wp:#FFFFFF; --focus:#2F6BF2;
+  --shadow:0 1px 2px rgba(10,20,28,.10),0 10px 30px rgba(10,20,28,.22);
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif; --f-body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace; --r:14px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --panel:rgba(18,26,32,.94); --panel-solid:#121A20; --ink:#E8EEF1; --muted:#9AA8B2; --line:#2A3740; --chip:#1D2830;
+  --route:#5B8CFF; --route-ink:#9BB8FF; --go:#24A36A; --go-ink:#FFFFFF; --focus:#7FA6FF; --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.5);
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --panel:rgba(18,26,32,.94); --panel-solid:#121A20; --ink:#E8EEF1; --muted:#9AA8B2; --line:#2A3740; --chip:#1D2830;
+  --route:#5B8CFF; --route-ink:#9BB8FF; --go:#24A36A; --go-ink:#FFFFFF; --focus:#7FA6FF; --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px rgba(0,0,0,.5);
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0}
+body{background:#0E1B24;color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+*{box-sizing:border-box}
+button,a{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+[hidden]{display:none!important}
+#map{position:absolute;inset:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+
+/* route card */
+.card{position:absolute;z-index:3;left:max(14px,env(safe-area-inset-left,0px));top:calc(14px + env(safe-area-inset-top,0px));width:372px;
+  max-height:calc(100% - 28px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden}
+.c-head{padding:14px 16px 12px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+h1{margin:4px 0 0;font-family:var(--f-display);font-stretch:118%;font-weight:800;font-size:23px;line-height:1.05;letter-spacing:.01em}
+.stats{display:flex;gap:18px;margin-top:9px;font-size:12px;color:var(--muted)}
+.stats b{display:block;font-family:var(--f-mono);font-weight:500;font-size:15px;color:var(--ink);font-variant-numeric:tabular-nums}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 13px;border-radius:10px;border:1px solid var(--line);background:var(--panel-solid);
+  font-weight:650;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{background:var(--chip)}
+.btn svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn.go{background:var(--go);border-color:var(--go);color:var(--go-ink)}
+.btn.go:hover{filter:brightness(1.07)}
+.btn.sm{min-height:32px;padding:0 10px;font-size:12.5px;border-radius:9px}
+.btn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--panel-solid)}
+.sheet-t{display:none}
+.c-body{overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px 8px 8px;flex:1 1 auto;min-height:0}
+.note{font-size:11.5px;color:var(--muted);padding:6px 8px 2px;margin:0}
+
+/* stop list */
+.stops{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.st{width:100%;display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid transparent;background:none;border-radius:10px;padding:8px;cursor:pointer;text-align:left}
+.st:hover{background:var(--chip)}
+.st[aria-current="true"]{background:var(--chip);border-color:var(--ink)}
+.num{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#0E1B24;color:#fff;font:600 12px/1 var(--f-mono);box-shadow:0 0 0 2px #fff}
+.num.wp{background:#fff;color:#0E1B24;box-shadow:inset 0 0 0 2px #0E1B24}
+.st .t{display:block;font-weight:700;font-size:13.5px;line-height:1.25}
+.st .s{display:block;font-size:12px;color:var(--muted);line-height:1.3;margin-top:1px}
+.st .d{font-family:var(--f-mono);font-size:11px;color:var(--muted);text-align:right;line-height:1.4;white-space:nowrap;font-variant-numeric:tabular-nums}
+.detail{margin:2px 0 6px;padding:12px;border-radius:12px;background:var(--chip);display:grid;gap:9px}
+.detail .row{display:flex;gap:8px;flex-wrap:wrap}
+.detail .nav2{justify-content:space-between}
+.btn:disabled{opacity:.4;cursor:default}
+.detail dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}
+.detail dt{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+.detail dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.mono{font-family:var(--f-mono);font-size:12px}
+
+/* view switches */
+.views{position:absolute;z-index:3;right:max(14px,env(safe-area-inset-right,0px));top:calc(14px + env(safe-area-inset-top,0px));display:flex;gap:8px;padding:6px}
+.seg{display:inline-flex;background:var(--chip);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;padding:6px 11px;border-radius:8px;font-weight:650;font-size:13px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--panel-solid);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+
+/* tour bar */
+.tour{position:absolute;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(28px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;max-width:calc(100% - 28px)}
+.tour .tt{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tour .bar{width:140px;height:4px;border-radius:2px;background:var(--line);overflow:hidden;flex:none}
+.tour .bar i{display:block;height:100%;width:0;background:var(--route)}
+
+.toast{position:absolute;z-index:5;left:50%;top:calc(16px + env(safe-area-inset-top,0px));transform:translateX(-50%);padding:9px 14px;font-size:13px;font-weight:600}
+.nogl{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#E8EEF1}
+.nogl div{max-width:360px;display:grid;gap:12px;justify-items:center}
+
+/* MapLibre controls in the same language */
+.maplibregl-ctrl-group{border-radius:12px!important;box-shadow:var(--shadow)!important;overflow:hidden}
+.maplibregl-ctrl-group button{width:38px!important;height:38px!important}
+.maplibregl-ctrl-bottom-right{bottom:env(safe-area-inset-bottom,0px);right:env(safe-area-inset-right,0px)}
+.maplibregl-ctrl-attrib{font-size:10.5px}
+.maplibregl-ctrl-scale{border-color:#fff;color:#fff;background:rgba(0,0,0,.35);text-shadow:none}
+
+@media (max-width:720px){
+  .card{left:0;right:0;top:auto;bottom:0;width:auto;border-radius:18px 18px 0 0;border-bottom:0;max-height:62%;
+    padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  .card.min .c-body{display:none}
+  .c-head{padding:10px 14px 12px;border-bottom:0}
+  .card:not(.min) .c-head{border-bottom:1px solid var(--line)}
+  .sheet-t{display:block;width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 8px;border:0;padding:0;cursor:pointer}
+  h1{font-size:20px}
+  .views{left:max(12px,env(safe-area-inset-left,0px));right:auto;padding:4px}
+  .maplibregl-ctrl-bottom-right{bottom:calc(env(safe-area-inset-bottom,0px) + var(--sheet-h, 170px))}
+  .maplibregl-ctrl-bottom-left{bottom:calc(env(safe-area-inset-bottom,0px) + var(--sheet-h, 170px))}
+  .tour{bottom:calc(var(--sheet-h, 170px) + 14px)}
+  .tour .bar{width:70px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div id="map" role="application" aria-label="3D satellite map of the Erode route"></div>
+
+<aside class="card panel" id="card" aria-label="Route">
+  <div class="c-head">
+    <button type="button" class="sheet-t" id="sheetT" aria-label="Show or hide the stop list" aria-expanded="true"></button>
+    <div class="eyebrow">Burhani Guards · Erode</div>
+    <h1>Erode Route</h1>
+    <div class="stats"><div><b id="sStops">10</b>stops</div><div><b id="sDist">19.4 km</b>by road</div><div><b id="sTime">28 min</b>by car</div></div>
+    <div class="acts">
+      <a class="btn go" id="openRoute" href="https://maps.app.goo.gl/qey6fZK5ZBaxcxst5" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg>Start in Google Maps</a>
+      <button type="button" class="btn" id="flyBtn"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg>Fly the route</button>
+      <button type="button" class="btn" id="overBtn"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Whole route</button>
+    </div>
+  </div>
+  <div class="c-body" id="cbody">
+    <ol class="stops" id="stops"></ol>
+    <p class="note">Tap a stop to see it in 3D. "Navigate" opens Google Maps with directions from where you are. The blue line follows the roads on OpenStreetMap through the same ten points as the shared Google Maps route.</p>
+  </div>
+</aside>
+
+<div class="views panel" role="toolbar" aria-label="Map view">
+  <div class="seg" role="group" aria-label="Map type"><button type="button" id="vSat" aria-pressed="true">Satellite</button><button type="button" id="vMap" aria-pressed="false">Map</button></div>
+  <div class="seg" role="group" aria-label="Tilt"><button type="button" id="v3d" aria-pressed="true">3D</button><button type="button" id="v2d" aria-pressed="false">2D</button></div>
+</div>
+
+<div class="tour panel" id="tour" hidden><span class="tt" id="tourT">Flying the route</span><span class="bar"><i id="tourBar"></i></span><button type="button" class="btn sm" id="tourStop">Stop</button></div>
+<div class="toast panel" id="toast" hidden></div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+(function () {
+"use strict";
+const STOPS = [{"n": 1, "name": "Sri Thindal Cafe (STC)", "sub": "Thindal ORR Corner, Perundurai Road", "lat": 11.3133847, "lon": 77.6667955, "kind": "place", "leg_m": 0, "cum_m": 0}, {"n": 2, "name": "Burhani Palace", "sub": "Chettipalayam", "lat": 11.3099715, "lon": 77.7217911, "kind": "place", "leg_m": 8995, "cum_m": 8995}, {"n": 3, "name": "Waypoint", "sub": "11.348424, 77.729225", "lat": 11.348424, "lon": 77.729225, "kind": "coord", "leg_m": 5580, "cum_m": 14575}, {"n": 4, "name": "Saif Tools & Machinery Stores", "sub": "163, Sathy Road", "lat": 11.3463393, "lon": 77.7236701, "kind": "place", "leg_m": 1158, "cum_m": 15733}, {"n": 5, "name": "Dawoodi Bohra Masjid", "sub": "Vairapalayam", "lat": 11.3570547, "lon": 77.7196622, "kind": "place", "leg_m": 1885, "cum_m": 17618}, {"n": 6, "name": "Waypoint", "sub": "11.360531, 77.718561", "lat": 11.360531, "lon": 77.718561, "kind": "coord", "leg_m": 602, "cum_m": 18220}, {"n": 7, "name": "Mufaddal Beehive", "sub": "159A, Priyamariyamman Kovil St, Vairapalayam", "lat": 11.360365, "lon": 77.7188693, "kind": "place", "leg_m": 32, "cum_m": 18253}, {"n": 8, "name": "Waypoint", "sub": "11.3552248, 77.7219404", "lat": 11.3552248, "lon": 77.7219404, "kind": "coord", "leg_m": 989, "cum_m": 19242}, {"n": 9, "name": "2, 8th C Street", "sub": "Thirunagar Colony, Pavalatham Palayam", "lat": 11.3546974, "lon": 77.7222362, "kind": "place", "leg_m": 103, "cum_m": 19345}, {"n": 10, "name": "End point", "sub": "11.3545182, 77.7227244", "lat": 11.3545182, "lon": 77.7227244, "kind": "coord", "leg_m": 64, "cum_m": 19408, "note": "Google Maps names this point Samraj Textiles Pvt Ltd."}];
+const ROUTE = [[77.666949,11.313474],[77.666921,11.313521],[77.666873,11.313578],[77.666811,11.313628],[77.666739,11.313663],[77.666461,11.313642],[77.666232,11.313606],[77.666083,11.313562],[77.665986,11.313524],[77.665906,11.31348],[77.665792,11.313395],[77.665722,11.31332],[77.665634,11.313212],[77.665579,11.313128],[77.665417,11.312887],[77.665324,11.312722],[77.66515,11.312473],[77.664913,11.312257],[77.664858,11.312194],[77.664293,11.311677],[77.664307,11.311794],[77.664877,11.312285],[77.66511,11.312549],[77.665204,11.312688],[77.665334,11.312891],[77.665493,11.313134],[77.665683,11.313394],[77.665754,11.313464],[77.665848,11.313543],[77.665954,11.313601],[77.666068,11.313644],[77.666186,11.313675],[77.66691,11.313841],[77.66694,11.313867],[77.666978,11.313881],[77.667018,11.313882],[77.667056,11.313869],[77.667087,11.313845],[77.667109,11.313811],[77.667117,11.313773],[77.667112,11.313737],[77.667096,11.313704],[77.66707,11.313677],[77.667076,11.313363],[77.667073,11.313095],[77.66705,11.313036],[77.667101,11.312442],[77.667116,11.312399],[77.667216,11.312099],[77.667292,11.311945],[77.667409,11.311709],[77.667602,11.311448],[77.667878,11.311178],[77.668194,11.31088],[77.668532,11.310607],[77.668771,11.310411],[77.66913,11.310198],[77.669894,11.309872],[77.670536,11.309591],[77.671638,11.309133],[77.671777,11.309084],[77.671958,11.30902],[77.672042,11.30899],[77.673064,11.308629],[77.675427,11.307594],[77.675998,11.307344],[77.679053,11.30613],[77.681898,11.304807],[77.683171,11.304184],[77.683296,11.304093],[77.68351,11.303956],[77.685345,11.3027],[77.685625,11.302515],[77.687611,11.301181],[77.68772,11.301088],[77.687858,11.300969],[77.689221,11.300054],[77.689907,11.299637],[77.690163,11.299497],[77.690382,11.299405],[77.690608,11.299352],[77.690865,11.299338],[77.691922,11.299293],[77.692382,11.299303],[77.692832,11.299351],[77.69406,11.299583],[77.695403,11.299821],[77.696306,11.299908],[77.696682,11.299969],[77.696744,11.299975],[77.698372,11.300128],[77.698883,11.300164],[77.699989,11.300243],[77.701059,11.300236],[77.701244,11.300189],[77.701741,11.300065],[77.702017,11.299978],[77.702491,11.299852],[77.702945,11.299776],[77.703912,11.299742],[77.704537,11.29972],[77.705278,11.299671],[77.705759,11.29962],[77.70744,11.29944],[77.708533,11.299328],[77.709182,11.299258],[77.709346,11.299236],[77.709836,11.299171],[77.710144,11.299094],[77.710888,11.29881],[77.711364,11.298569],[77.711772,11.298362],[77.712176,11.298136],[77.712458,11.297955],[77.712822,11.297672],[77.713043,11.29792],[77.713331,11.29825],[77.713464,11.29843],[77.713733,11.298804],[77.713804,11.29891],[77.713949,11.299133],[77.714048,11.299329],[77.71413,11.299527],[77.714172,11.299671],[77.714188,11.299752],[77.714235,11.299959],[77.714265,11.300018],[77.714447,11.30025],[77.714662,11.300503],[77.714861,11.300649],[77.715053,11.300724],[77.715273,11.300783],[77.715499,11.300844],[77.715658,11.300922],[77.715722,11.30099],[77.715759,11.301027],[77.715829,11.301198],[77.715888,11.301494],[77.715935,11.301677],[77.716347,11.301693],[77.716447,11.301703],[77.71664,11.301722],[77.716795,11.301749],[77.716904,11.301768],[77.717124,11.301851],[77.717305,11.301956],[77.717395,11.301974],[77.717704,11.301937],[77.718004,11.301896],[77.718292,11.301883],[77.718433,11.301876],[77.71868,11.301837],[77.718849,11.301863],[77.719122,11.301932],[77.719393,11.301953],[77.719534,11.301984],[77.719645,11.302079],[77.719705,11.302203],[77.719817,11.302646],[77.71986,11.302802],[77.719903,11.302954],[77.719982,11.303309],[77.719992,11.303489],[77.720039,11.3037],[77.720092,11.303784],[77.720132,11.303792],[77.720051,11.303826],[77.720003,11.303848],[77.719942,11.303855],[77.719439,11.303922],[77.719414,11.303937],[77.719392,11.303958],[77.719427,11.304343],[77.719394,11.304391],[77.719372,11.304409],[77.719362,11.304448],[77.719365,11.304617],[77.719409,11.30511],[77.719385,11.305229],[77.719358,11.305359],[77.719342,11.305421],[77.719636,11.306557],[77.719988,11.306474],[77.720109,11.307254],[77.720143,11.307474],[77.720462,11.307468],[77.7207,11.307463],[77.720867,11.307464],[77.721651,11.307468],[77.722426,11.307679],[77.72222,11.307837],[77.722102,11.307933],[77.721962,11.308047],[77.721898,11.308163],[77.721783,11.308372],[77.721548,11.30886],[77.721416,11.309268],[77.721379,11.309636],[77.721363,11.309798],[77.721327,11.310059],[77.721281,11.310338],[77.721335,11.310519],[77.721348,11.310602],[77.721676,11.310575],[77.721699,11.309506],[77.721689,11.30997],[77.721676,11.310575],[77.721668,11.311006],[77.722022,11.312763],[77.72228,11.312739],[77.722612,11.312707],[77.722826,11.312683],[77.723109,11.312707],[77.723287,11.312735],[77.723849,11.312889],[77.724034,11.312928],[77.724439,11.313096],[77.724593,11.313206],[77.724784,11.313307],[77.725181,11.313544],[77.725245,11.313582],[77.725484,11.313728],[77.725541,11.313782],[77.725633,11.313868],[77.725767,11.314053],[77.725907,11.314247],[77.726448,11.314211],[77.726544,11.314577],[77.726661,11.315043],[77.726673,11.315091],[77.726791,11.315546],[77.726818,11.315683],[77.726848,11.315937],[77.726891,11.316512],[77.726904,11.316679],[77.72691,11.316806],[77.726927,11.317112],[77.726929,11.317144],[77.72699,11.317653],[77.72702,11.317856],[77.727094,11.318217],[77.727162,11.318545],[77.727175,11.318618],[77.727268,11.319044],[77.72729,11.319186],[77.727305,11.319256],[77.727357,11.319628],[77.727393,11.319861],[77.727395,11.319954],[77.727402,11.32023],[77.727377,11.320502],[77.727365,11.321063],[77.727363,11.321285],[77.727362,11.321667],[77.727335,11.322241],[77.72732,11.322525],[77.727319,11.322644],[77.727306,11.322777],[77.727227,11.323714],[77.727182,11.323939],[77.727149,11.324127],[77.727174,11.324225],[77.727271,11.324382],[77.727413,11.324514],[77.727797,11.324794],[77.728132,11.325054],[77.728384,11.325258],[77.728895,11.325599],[77.729381,11.325933],[77.729511,11.326045],[77.729684,11.326176],[77.730099,11.326492],[77.730435,11.326746],[77.730506,11.326818],[77.730559,11.326898],[77.730585,11.326969],[77.730584,11.327006],[77.730575,11.327088],[77.730372,11.327499],[77.73016,11.327891],[77.730135,11.327943],[77.72995,11.328304],[77.7297,11.328863],[77.729382,11.329512],[77.729129,11.329966],[77.728937,11.330348],[77.728809,11.330607],[77.728768,11.330651],[77.728681,11.330724],[77.728454,11.330758],[77.728227,11.330785],[77.727439,11.330877],[77.727421,11.330863],[77.7274,11.330855],[77.727378,11.330855],[77.727356,11.330861],[77.727343,11.33087],[77.727304,11.330894],[77.727303,11.330943],[77.727343,11.330973],[77.727363,11.330984],[77.727358,11.331207],[77.727362,11.33133],[77.727403,11.331444],[77.727441,11.331751],[77.727492,11.332338],[77.727531,11.33285],[77.727547,11.333651],[77.727542,11.333718],[77.727427,11.334419],[77.72739,11.334612],[77.727291,11.334943],[77.727087,11.335797],[77.726895,11.336428],[77.726654,11.337356],[77.726387,11.338549],[77.726316,11.339239],[77.726833,11.33968],[77.727204,11.340116],[77.72739,11.340336],[77.727452,11.340449],[77.727854,11.341186],[77.728125,11.34171],[77.728208,11.341812],[77.728312,11.342042],[77.728438,11.342288],[77.728806,11.342825],[77.728916,11.342985],[77.729056,11.343189],[77.729284,11.343455],[77.729656,11.343887],[77.729708,11.343977],[77.73012,11.344695],[77.730172,11.344795],[77.730215,11.344878],[77.730226,11.34495],[77.730238,11.345019],[77.730336,11.345324],[77.730375,11.345409],[77.730592,11.345987],[77.730704,11.346244],[77.730964,11.346853],[77.731199,11.347266],[77.731343,11.347535],[77.731622,11.348026],[77.731705,11.348173],[77.731746,11.348233],[77.731829,11.348352],[77.731927,11.348515],[77.731864,11.348545],[77.731532,11.34866],[77.731231,11.348745],[77.730952,11.348818],[77.730748,11.348871],[77.730426,11.348923],[77.730072,11.348997],[77.729826,11.34905],[77.729611,11.349071],[77.729439,11.349071],[77.729429,11.34885],[77.729397,11.34865],[77.729379,11.348535],[77.729231,11.348542],[77.729181,11.348545],[77.728824,11.348565],[77.728527,11.348583],[77.728516,11.348118],[77.728431,11.348124],[77.728115,11.348134],[77.728115,11.347355],[77.72717,11.347291],[77.72709,11.347285],[77.726722,11.347189],[77.726288,11.347097],[77.725834,11.346841],[77.725909,11.346725],[77.725967,11.346632],[77.72602,11.346548],[77.726374,11.345961],[77.726572,11.345642],[77.726732,11.345427],[77.726745,11.345368],[77.726999,11.344964],[77.726889,11.344936],[77.726774,11.344974],[77.726518,11.345091],[77.726443,11.345129],[77.72619,11.345256],[77.725844,11.345419],[77.725303,11.345632],[77.724949,11.345787],[77.724599,11.34593],[77.723921,11.346243],[77.723786,11.346304],[77.723676,11.346352],[77.723178,11.346566],[77.722525,11.346844],[77.721734,11.347148],[77.721362,11.34727],[77.721383,11.347343],[77.721882,11.348853],[77.721942,11.34904],[77.721968,11.349121],[77.722218,11.349897],[77.722254,11.350006],[77.722479,11.350655],[77.722498,11.350715],[77.72255,11.35076],[77.722473,11.350843],[77.722093,11.351222],[77.721573,11.351662],[77.720944,11.352114],[77.720855,11.352183],[77.720221,11.352628],[77.719612,11.353035],[77.719478,11.353133],[77.71887,11.353676],[77.718804,11.353751],[77.718767,11.353828],[77.718553,11.354113],[77.71848,11.354216],[77.718375,11.354351],[77.718303,11.354458],[77.71821,11.354601],[77.718094,11.354775],[77.717796,11.355237],[77.717492,11.35578],[77.717409,11.355935],[77.717385,11.355984],[77.717211,11.35634],[77.717135,11.356495],[77.717288,11.356531],[77.717373,11.356544],[77.717604,11.356553],[77.718352,11.356583],[77.718453,11.356586],[77.718534,11.356617],[77.718566,11.356674],[77.718579,11.356808],[77.718626,11.357102],[77.719656,11.356998],[77.719769,11.356987],[77.719873,11.356999],[77.719987,11.357022],[77.720164,11.357096],[77.720148,11.357139],[77.72015,11.357211],[77.720153,11.35734],[77.720165,11.357759],[77.720181,11.358276],[77.720053,11.358293],[77.719868,11.358407],[77.719749,11.358492],[77.719074,11.358971],[77.718948,11.359044],[77.719108,11.359285],[77.719301,11.359579],[77.719451,11.359821],[77.719622,11.36],[77.718846,11.36041],[77.718626,11.360536],[77.718626,11.360536],[77.718846,11.36041],[77.718883,11.36039],[77.719622,11.36],[77.719451,11.359821],[77.719301,11.359579],[77.719108,11.359285],[77.718948,11.359044],[77.719074,11.358971],[77.719749,11.358492],[77.719868,11.358407],[77.720053,11.358293],[77.720181,11.358276],[77.72047,11.358261],[77.721576,11.358176],[77.721622,11.358172],[77.721695,11.358141],[77.722547,11.357782],[77.722032,11.356671],[77.721934,11.356463],[77.721542,11.35563],[77.721465,11.355467],[77.721954,11.355257],[77.722198,11.355152],[77.722444,11.355047],[77.72228,11.354678],[77.722263,11.354641],[77.722245,11.354617],[77.722249,11.354584],[77.722426,11.354565],[77.722523,11.354548],[77.722598,11.354545],[77.722723,11.35455]];            // [[lon, lat], ...] along the roads, start to end
+const ROUTE_M = 19408, ROUTE_S = 1677;
+const GMAPS_ROUTE = "https://maps.app.goo.gl/qey6fZK5ZBaxcxst5";
+const $ = id => document.getElementById(id);
+const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const km = m => m >= 1000 ? (m / 1000).toFixed(1) + " km" : Math.round(m) + " m";
+const isPhone = () => matchMedia("(max-width:720px)").matches;
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const title = s => s.kind === "place" ? s.name : (s.n === STOPS.length ? "End point" : "Waypoint");
+const navUrl = s => `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}&travelmode=driving`;
+
+$("sStops").textContent = STOPS.length; $("sDist").textContent = (ROUTE_M / 1000).toFixed(1) + " km"; $("sTime").textContent = Math.round(ROUTE_S / 60) + " min";
+
+/* ---------------------------------------------------------------- stop list (works even without the map) */
+const listEl = $("stops");
+STOPS.forEach((s, i) => {
+  const li = document.createElement("li"); li.id = "li" + i;
+  li.innerHTML = `<button type="button" class="st" data-i="${i}"><span class="num${s.kind === "place" ? "" : " wp"}">${s.n}</span>` +
+    `<span><span class="t">${esc(title(s))}</span><span class="s">${esc(s.kind === "place" ? s.sub : s.lat.toFixed(5) + ", " + s.lon.toFixed(5))}</span></span>` +
+    `<span class="d">${i ? "+" + km(s.leg_m) + "<br>" + km(s.cum_m) : "Start<br>0 km"}</span></button>`;
+  listEl.appendChild(li);
+});
+let sel = -1;
+function detailHTML(s) {
+  return `<div class="detail" id="detail">
+    <dl><dt>Stop</dt><dd>${s.n} of ${STOPS.length}</dd>
+    ${s.kind === "place" ? `<dt>Address</dt><dd>${esc(s.sub)}</dd>` : ""}
+    ${s.note ? `<dt>Note</dt><dd>${esc(s.note)}</dd>` : ""}
+    <dt>Distance</dt><dd>${s.n > 1 ? km(s.leg_m) + " from stop " + (s.n - 1) + " · " + km(s.cum_m) + " from the start" : "Start of the route"}</dd>
+    <dt>Location</dt><dd class="mono"><span id="coords">${s.lat.toFixed(6)}, ${s.lon.toFixed(6)}</span></dd></dl>
+    <div class="row"><a class="btn go sm" href="${navUrl(s)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg>Navigate here</a>
+    <button type="button" class="btn sm" id="copyC">Copy location</button></div>
+    <div class="row nav2"><button type="button" class="btn sm" data-step="-1"${s.n <= 1 ? " disabled" : ""}>‹ Stop ${s.n - 1 || ""}</button><button type="button" class="btn sm" data-step="1"${s.n >= STOPS.length ? " disabled" : ""}>Stop ${s.n < STOPS.length ? s.n + 1 : ""} ›</button></div>
+  </div>`;
+}
+function showDetail(i) {
+  const old = $("detail"); if (old) old.remove();
+  listEl.querySelectorAll(".st").forEach(b => b.setAttribute("aria-current", +b.dataset.i === i));
+  if (i < 0) return;
+  $("li" + i).insertAdjacentHTML("beforeend", detailHTML(STOPS[i]));
+  const c = $("copyC");
+  c.onclick = () => { const t = STOPS[i].lat.toFixed(6) + ", " + STOPS[i].lon.toFixed(6);
+    const ok = () => { c.textContent = "Copied"; setTimeout(() => c.textContent = "Copy location", 1500); };
+    const pick = () => { try { const r = document.createRange(); r.selectNodeContents($("coords")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } catch (_) {} };
+    try { navigator.clipboard.writeText(t).then(ok, pick); } catch (_) { pick(); } };
+  $("detail").querySelectorAll("[data-step]").forEach(b => b.onclick = () => go(i + +b.dataset.step));
+  requestAnimationFrame(() => $("li" + i).scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" }));
+}
+listEl.addEventListener("click", e => { const b = e.target.closest(".st"); if (b) go(+b.dataset.i); });
+
+/* phone bottom sheet */
+const card = $("card");
+function setSheet(open) { card.classList.toggle("min", !open); $("sheetT").setAttribute("aria-expanded", open); sheetH(); }
+function sheetH() { if (!isPhone()) return; document.documentElement.style.setProperty("--sheet-h", card.getBoundingClientRect().height + "px"); }
+$("sheetT").onclick = () => setSheet(card.classList.contains("min"));
+new ResizeObserver(sheetH).observe(card);
+if (isPhone()) setSheet(false);
+
+function toast(t, ms) { const el = $("toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => el.hidden = true, ms || 2600); }
+
+/* ---------------------------------------------------------------- map */
+function hasGL() { try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch (_) { return false; } }
+if (!window.maplibregl || !hasGL()) {
+  $("map").innerHTML = `<div class="nogl"><div><b>This phone or browser can't show the 3D map.</b><span>The stop list still works, and the route opens in Google Maps.</span><a class="btn go" href="${GMAPS_ROUTE}" target="_blank" rel="noopener">Start in Google Maps</a></div></div>`;
+  window.go = i => showDetail(i);
+  return;
+}
+const SAT = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+const OMT = "https://tiles.openfreemap.org/planet";
+const GLYPHS = "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf";
+const nameExpr = ["coalesce", ["get", "name:latin"], ["get", "name_en"], ["get", "name"]];
+const SKY = { "sky-color": "#7FB3E8", "horizon-color": "#DCE8F0", "fog-color": "#DCE8F0", "sky-horizon-blend": 0.6, "horizon-fog-blend": 0.7, "fog-ground-blend": 0.75, "atmosphere-blend": 0.7 };
+function satelliteStyle() {
+  return {
+    version: 8, glyphs: GLYPHS, sky: SKY,
+    sources: {
+      sat: { type: "raster", tiles: [SAT], tileSize: 256, maxzoom: 19, attribution: 'Imagery © <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics' },
+      omt: { type: "vector", url: OMT, attribution: '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' }
+    },
+    layers: [
+      { id: "bg", type: "background", paint: { "background-color": "#22302A" } },
+      { id: "sat", type: "raster", source: "sat", paint: { "raster-contrast": 0.08, "raster-saturation": 0.05, "raster-fade-duration": 200 } },
+      { id: "rd-minor", type: "line", source: "omt", "source-layer": "transportation", minzoom: 13,
+        filter: ["in", ["get", "class"], ["literal", ["tertiary", "minor", "service"]]],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "rgba(255,255,255,0.32)", "line-width": ["interpolate", ["linear"], ["zoom"], 13, 0.5, 16, 1.4, 19, 4] } },
+      { id: "rd-major", type: "line", source: "omt", "source-layer": "transportation",
+        filter: ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary", "secondary"]]],
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "rgba(255,221,140,0.62)", "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.6, 13, 1.6, 16, 3, 19, 7] } },
+      { id: "water-name", type: "symbol", source: "omt", "source-layer": "water_name",
+        layout: { "text-field": nameExpr, "text-font": ["Noto Sans Italic"], "text-size": 12 }, paint: { "text-color": "#CFE6FF", "text-halo-color": "rgba(0,0,0,.8)", "text-halo-width": 1.4 } },
+      { id: "poi", type: "symbol", source: "omt", "source-layer": "poi", minzoom: 15.5, filter: ["has", "name"],
+        layout: { "text-field": nameExpr, "text-font": ["Noto Sans Regular"], "text-size": 11, "text-max-width": 9, "text-padding": 4 },
+        paint: { "text-color": "#FFFFFF", "text-halo-color": "rgba(0,0,0,.85)", "text-halo-width": 1.4 } },
+      { id: "rd-name", type: "symbol", source: "omt", "source-layer": "transportation_name", minzoom: 13.5,
+        layout: { "symbol-placement": "line", "text-field": nameExpr, "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 13.5, 10, 18, 14], "text-letter-spacing": 0.03, "text-max-angle": 30 },
+        paint: { "text-color": "#FFFFFF", "text-halo-color": "rgba(0,0,0,.88)", "text-halo-width": 1.6 } },
+      { id: "place", type: "symbol", source: "omt", "source-layer": "place",
+        filter: ["in", ["get", "class"], ["literal", ["city", "town", "suburb", "neighbourhood", "quarter", "village", "hamlet"]]],
+        layout: { "text-field": nameExpr, "text-font": ["Noto Sans Bold"], "text-transform": "uppercase", "text-letter-spacing": 0.12,
+          "text-size": ["match", ["get", "class"], "city", 16, "town", 15, "suburb", 12.5, 11.5], "text-max-width": 8, "text-padding": 6 },
+        paint: { "text-color": "#FFFFFF", "text-halo-color": "rgba(0,0,0,.8)", "text-halo-width": 1.8 } }
+    ]
+  };
+}
+const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+
+const bounds = ROUTE.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(ROUTE[0], ROUTE[0]));
+const map = new maplibregl.Map({
+  container: "map", style: satelliteStyle(), bounds, fitBoundsOptions: { padding: 40 }, pitch: 48, bearing: -10,
+  maxPitch: 72, attributionControl: false, dragRotate: true, touchPitch: true, cooperativeGestures: false, fadeDuration: 150
+});
+map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showZoom: true }), "bottom-right");
+const geo = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showUserHeading: true, fitBoundsOptions: { maxZoom: 16.5 } });
+map.addControl(geo, "bottom-right");
+map.addControl(new maplibregl.ScaleControl({ unit: "metric", maxWidth: 110 }), isPhone() ? "bottom-left" : "bottom-right");
+geo.on("error", () => toast("Your location isn't available. Allow location for this page in your browser settings."));
+
+/* route + stops, added again whenever the map style changes */
+const routeGeo = { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: ROUTE } };
+const stopsGeo = { type: "FeatureCollection", features: STOPS.map((s, i) => ({ type: "Feature", id: i, properties: { n: String(s.n), name: s.kind === "place" ? s.name : "", place: s.kind === "place" }, geometry: { type: "Point", coordinates: [s.lon, s.lat] } })) };
+function arrowImage() {
+  const c = document.createElement("canvas"), r = 2; c.width = c.height = 24 * r; const g = c.getContext("2d"); g.scale(r, r);
+  g.fillStyle = "#FFFFFF"; g.beginPath(); g.moveTo(7, 6); g.lineTo(17, 12); g.lineTo(7, 18); g.lineTo(9.5, 12); g.closePath(); g.fill();
+  return { width: c.width, height: c.height, data: g.getImageData(0, 0, c.width, c.height).data };
+}
+function badgeImage(st) {
+  const place = st.kind === "place", r = 2, R = place ? 14 : 11, S = (R + 4) * 2;
+  const c = document.createElement("canvas"); c.width = c.height = S * r; const g = c.getContext("2d"); g.scale(r, r);
+  g.beginPath(); g.arc(S / 2, S / 2, R + 2.5, 0, Math.PI * 2); g.fillStyle = place ? "#FFFFFF" : "#0E1B24"; g.fill();
+  g.beginPath(); g.arc(S / 2, S / 2, R, 0, Math.PI * 2); g.fillStyle = place ? "#0E1B24" : "#FFFFFF"; g.fill();
+  g.fillStyle = place ? "#FFFFFF" : "#0E1B24"; g.textAlign = "center"; g.textBaseline = "middle";
+  g.font = `700 ${place ? 13 : 11}px "IBM Plex Mono", ui-monospace, Menlo, monospace`; g.fillText(String(st.n), S / 2, S / 2 + 0.5);
+  return { width: c.width, height: c.height, data: g.getImageData(0, 0, c.width, c.height).data };
+}
+let progress = 1;
+function addOverlay() {
+  if (map.getSource("route")) return;
+  if (!map.hasImage("arrow")) map.addImage("arrow", arrowImage(), { pixelRatio: 2 });
+  map.addSource("route", { type: "geojson", data: routeGeo, lineMetrics: true });
+  map.addSource("stops", { type: "geojson", data: stopsGeo });
+  map.addSource("stopnames", { type: "geojson", data: { type: "FeatureCollection", features: stopsGeo.features.filter(f => f.properties.place) } });
+  const w = (a, b) => ["interpolate", ["exponential", 1.4], ["zoom"], 10, a, 14, a * 1.9, 18, b];
+  map.addLayer({ id: "route-shadow", type: "line", source: "route", layout: { "line-join": "round", "line-cap": "round" },
+    paint: { "line-color": "rgba(0,0,0,0.35)", "line-width": w(9, 26), "line-blur": 4, "line-translate": [1, 2] } });
+  map.addLayer({ id: "route-casing", type: "line", source: "route", layout: { "line-join": "round", "line-cap": "round" },
+    paint: { "line-color": "#FFFFFF", "line-width": w(6.5, 20) } });
+  map.addLayer({ id: "route-line", type: "line", source: "route", layout: { "line-join": "round", "line-cap": "round" },
+    paint: { "line-color": "#2F6BF2", "line-width": w(4, 14) } });
+  map.addLayer({ id: "route-arrows", type: "symbol", source: "route", minzoom: 12.5,
+    layout: { "symbol-placement": "line", "symbol-spacing": ["interpolate", ["linear"], ["zoom"], 12.5, 70, 18, 110], "icon-image": "arrow", "icon-size": ["interpolate", ["linear"], ["zoom"], 12.5, 0.55, 18, 1.1],
+      "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-rotation-alignment": "map", "icon-pitch-alignment": "map" } });
+  // numbered badges are drawn as images, so they show even if the label font is slow to load
+  STOPS.forEach(st => { const id = "stop-" + st.n; if (!map.hasImage(id)) map.addImage(id, badgeImage(st), { pixelRatio: 2 }); });
+  map.addLayer({ id: "stop-ring", type: "circle", source: "stops",
+    paint: { "circle-radius": ["case", ["boolean", ["feature-state", "sel"], false], 23, 0], "circle-color": "rgba(255,211,77,0.28)",
+      "circle-stroke-color": "#FFD34D", "circle-stroke-width": ["case", ["boolean", ["feature-state", "sel"], false], 3.5, 0], "circle-pitch-alignment": "viewport" } });
+  map.addLayer({ id: "stop-dot", type: "symbol", source: "stops",
+    layout: { "icon-image": ["concat", "stop-", ["get", "n"]], "icon-allow-overlap": true, "icon-ignore-placement": true, "icon-pitch-alignment": "viewport",
+      "symbol-sort-key": ["-", 0, ["to-number", ["get", "n"]]], "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.82, 15, 1] } });
+  map.addLayer({ id: "stop-name", type: "symbol", source: "stopnames",
+    layout: { "text-field": ["get", "name"], "text-font": ["Noto Sans Bold"], "text-size": ["interpolate", ["linear"], ["zoom"], 11, 12, 17, 15], "text-anchor": "left", "text-offset": [1.45, 0],
+      "text-max-width": 14, "text-padding": 3, "text-optional": true, "symbol-sort-key": ["to-number", ["get", "n"]] },
+    paint: { "text-color": "#FFFFFF", "text-halo-color": "#0E1B24", "text-halo-width": 2.2 } });
+  if (sel >= 0) map.setFeatureState({ source: "stops", id: sel }, { sel: true });
+  setProgress(progress);
+}
+function setProgress(p) {
+  progress = p; if (!map.getLayer("route-line")) return;
+  const g = p >= 1 ? null : ["step", ["line-progress"], "#2F6BF2", Math.max(0.0001, p), "rgba(47,107,242,0)"];
+  const gc = p >= 1 ? null : ["step", ["line-progress"], "#FFFFFF", Math.max(0.0001, p), "rgba(255,255,255,0.35)"];
+  map.setPaintProperty("route-line", "line-gradient", g); map.setPaintProperty("route-casing", "line-gradient", gc);
+}
+map.on("style.load", addOverlay);
+map.on("click", "stop-dot", e => { const f = e.features && e.features[0]; if (f) go(f.id); });
+map.on("mouseenter", "stop-dot", () => map.getCanvas().style.cursor = "pointer");
+map.on("mouseleave", "stop-dot", () => map.getCanvas().style.cursor = "");
+map.on("error", e => { if (e && e.error && /Failed to fetch|NetworkError|load/i.test(String(e.error.message))) { if (!toast.net) { toast.net = true; toast("Some map pictures didn't load. Check the internet connection.", 4000); } } });
+
+/* camera helpers */
+const R2D = 180 / Math.PI, D2R = Math.PI / 180;
+const CUM = [0]; for (let i = 1; i < ROUTE.length; i++) CUM.push(CUM[i - 1] + dist(ROUTE[i - 1], ROUTE[i]));
+const RL = CUM[CUM.length - 1];
+function dist(a, b) { const kx = Math.cos(a[1] * D2R) * 111320, ky = 110574; return Math.hypot((b[0] - a[0]) * kx, (b[1] - a[1]) * ky); }
+function at(d) { d = Math.max(0, Math.min(RL, d)); let i = 1; while (i < CUM.length - 1 && CUM[i] < d) i++; const t = (d - CUM[i - 1]) / ((CUM[i] - CUM[i - 1]) || 1), a = ROUTE[i - 1], b = ROUTE[i]; return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+function heading(d) { let sx = 0, sy = 0; for (const o of [-360, -180, 0, 180, 360]) { const a = at(d + o - 120), b = at(d + o + 120), kx = Math.cos(a[1] * D2R); const dx = (b[0] - a[0]) * kx, dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; sx += dx / l; sy += dy / l; } return Math.atan2(sx, sy) * R2D; }
+function nearestD(lon, lat) { let best = 0, bd = 1e12; for (let i = 0; i < ROUTE.length; i++) { const d = dist([lon, lat], ROUTE[i]); if (d < bd) { bd = d; best = CUM[i]; } } return best; }
+const STOP_D = STOPS.map(s => nearestD(s.lon, s.lat));
+function pad() {
+  if (isPhone()) return { top: 70, bottom: (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--sheet-h")) || 170) + 20, left: 30, right: 30 };
+  return { top: 80, bottom: 60, left: card.getBoundingClientRect().right + 30, right: 70 };
+}
+let tilt = true;
+function overview(ms) { stopTour(); map.fitBounds(bounds, { padding: pad(), pitch: tilt ? 48 : 0, bearing: tilt ? -10 : 0, duration: reduced ? 0 : (ms ?? 1800), maxZoom: 15 }); }
+function go(i) {
+  if (!(i >= 0 && i < STOPS.length)) return;
+  stopTour();
+  if (sel >= 0 && map.getSource("stops")) map.setFeatureState({ source: "stops", id: sel }, { sel: false });
+  sel = i; if (map.getSource("stops")) map.setFeatureState({ source: "stops", id: i }, { sel: true });
+  showDetail(i);
+  if (isPhone() && card.classList.contains("min")) setSheet(true);
+  const s = STOPS[i];
+  map.flyTo({ center: [s.lon, s.lat], zoom: 17.4, pitch: tilt ? 62 : 0, bearing: tilt ? heading(STOP_D[i]) : 0, padding: pad(), duration: reduced ? 0 : 2600, curve: 1.5, essential: true });
+}
+window.go = go;
+$("overBtn").onclick = () => { if (sel >= 0) { map.setFeatureState({ source: "stops", id: sel }, { sel: false }); sel = -1; showDetail(-1); } overview(); };
+
+/* satellite / map, 3D / 2D */
+function setStyleMode(sat) {
+  $("vSat").setAttribute("aria-pressed", sat); $("vMap").setAttribute("aria-pressed", !sat);
+  map.setStyle(sat ? satelliteStyle() : MAP_STYLE, { diff: false });
+}
+map.on("style.load", () => { if ($("vMap").getAttribute("aria-pressed") === "true" && !map.getSky()) try { map.setSky(SKY); } catch (_) {} });
+$("vSat").onclick = () => $("vSat").getAttribute("aria-pressed") !== "true" && setStyleMode(true);
+$("vMap").onclick = () => $("vMap").getAttribute("aria-pressed") !== "true" && setStyleMode(false);
+function setTilt(on) { tilt = on; $("v3d").setAttribute("aria-pressed", on); $("v2d").setAttribute("aria-pressed", !on); map.easeTo({ pitch: on ? 60 : 0, bearing: on ? map.getBearing() : 0, duration: reduced ? 0 : 900 }); }
+$("v3d").onclick = () => setTilt(true); $("v2d").onclick = () => setTilt(false);
+
+/* fly the route: the camera drives along the blue line, stops light up as it passes them */
+let tour = null;
+function startTour() {
+  if (sel >= 0) { map.setFeatureState({ source: "stops", id: sel }, { sel: false }); sel = -1; showDetail(-1); }
+  if (isPhone()) setSheet(false);
+  tour = { t0: performance.now(), dur: reduced ? 1 : 75000, last: -1 };
+  $("tour").hidden = false; $("flyBtn").setAttribute("aria-pressed", "true"); setProgress(0);
+  const p0 = at(0);
+  map.jumpTo({ center: p0, zoom: 15.6, pitch: tilt ? 64 : 0, bearing: tilt ? heading(0) : 0, padding: pad() });
+  requestAnimationFrame(stepTour);
+}
+function stopTour() {
+  if (!tour) return; tour = null; $("tour").hidden = true; $("flyBtn").setAttribute("aria-pressed", "false"); setProgress(1);
+}
+function stepTour(now) {
+  if (!tour) return;
+  const u = Math.min(1, (now - tour.t0) / tour.dur), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2, d = e * RL;
+  setProgress(Math.max(0.0005, e));
+  let k = 0; STOP_D.forEach((sd, i) => { if (sd <= d + 30) k = i; });
+  if (k !== tour.last) { tour.last = k; const s = STOPS[k]; $("tourT").textContent = `${s.n} · ${title(s)}`; }
+  $("tourBar").style.width = (e * 100).toFixed(1) + "%";
+  const c = at(d + 220), b = heading(d);
+  const cur = map.getBearing(); let db = ((b - cur + 540) % 360) - 180;
+  map.jumpTo({ center: c, bearing: tilt ? cur + db * 0.06 : 0, zoom: 15.6, pitch: tilt ? 64 : 0 });
+  if (u < 1) requestAnimationFrame(stepTour);
+  else { stopTour(); overview(2200); toast("That's the whole route. Tap a stop to see it up close."); }
+}
+$("flyBtn").onclick = () => tour ? stopTour() : startTour();
+$("tourStop").onclick = () => stopTour();
+map.on("dragstart", () => { if (tour) stopTour(); });
+map.on("wheel", () => { if (tour) stopTour(); });
+map.on("touchstart", () => { if (tour) stopTour(); });
+
+map.once("load", () => setTimeout(() => overview(1600), 300));
+addEventListener("keydown", e => { if (e.key === "Escape" && tour) stopTour(); });
+window.__erodeMap = { map, go, overview, startTour, stopTour };
+})();
+</script>
+</body>
+</html>
